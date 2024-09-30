@@ -59,11 +59,13 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             $wpo_usr = $request->get_item('wpo_usr');
             $is_user_sync = $request->get_item('user_sync');
             $is_scim = $request->get_item('scim');
+            $data = '';
 
             if ($is_user_sync) {
                 $category = 'SYNC';
             } else if ($is_scim) {
                 $category = 'SCIM';
+                $data = self::get_scim_attributes();
             } else if (!empty($wpo_usr)) {
                 $category = 'SSO';
             } else {
@@ -71,7 +73,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             }
 
             $user = self::get_event_user($wp_user_id, $wpo_usr);
-            $event = new Event('wpo365/user/created', $category, $user);
+            $event = new Event('wpo365/user/created', $category, $user, $data);
             self::add_event($event);
         }
 
@@ -90,11 +92,13 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             $wpo_usr = $request->get_item('wpo_usr');
             $is_user_sync = $request->get_item('user_sync');
             $is_scim = $request->get_item('scim');
+            $data = '';
 
             if ($is_user_sync) {
                 $category = 'SYNC';
             } else if ($is_scim) {
                 $category = 'SCIM';
+                $data = self::get_scim_attributes();
             } else {
                 $category = 'SSO';
             }
@@ -108,7 +112,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             }
 
             $user = self::get_event_user(0, $wpo_usr);
-            $event = new Event('wpo365/user/created', $category, $user, null, $error_message, 'ERROR', 'NOK');
+            $event = new Event('wpo365/user/created', $category, $user, $data, $error_message, 'ERROR', 'NOK');
             self::add_event($event);
         }
 
@@ -221,11 +225,13 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             $wpo_usr = $request->get_item('wpo_usr');
             $is_user_sync = $request->get_item('user_sync');
             $is_scim = $request->get_item('scim');
+            $data = '';
 
             if ($is_user_sync) {
                 $category = 'SYNC';
             } else if ($is_scim) {
                 $category = 'SCIM';
+                $data = self::get_scim_attributes();
             } else if (!empty($wpo_usr)) {
                 $category = 'SSO';
             } else {
@@ -233,7 +239,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             }
 
             $user = self::get_event_user($wp_user_id, $wpo_usr);
-            $event = new Event('wpo365/user/updated', $category, $user);
+            $event = new Event('wpo365/user/updated', $category, $user, $data);
             self::add_event($event);
         }
 
@@ -245,11 +251,13 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             $wpo_usr = $request->get_item('wpo_usr');
             $is_user_sync = $request->get_item('user_sync');
             $is_scim = $request->get_item('scim');
+            $data = null;
 
             if ($is_user_sync) {
                 $category = 'SYNC';
             } else if ($is_scim) {
                 $category = 'SCIM';
+                $data = self::get_scim_attributes();
             } else if (!empty($wpo_usr)) {
                 $category = 'SSO';
             } else {
@@ -257,7 +265,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             }
 
             $user = self::get_event_user($wp_user_id, $wpo_usr);
-            $event = new Event('wpo365/user/updated', $category, $user, null, $error, 'ERROR', 'NOK');
+            $event = new Event('wpo365/user/updated', $category, $user, $data, $error, 'ERROR', 'NOK');
             self::add_event($event);
         }
 
@@ -303,7 +311,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
                 $data = array(
                     'event_action' => $event->action,
                     'event_category' => $event->category,
-                    'event_data' => json_encode($event->data),
+                    'event_data' => $event->data,
                     'event_error' => $event->error,
                     'event_level' => $event->level,
                     'event_status' => $event->status,
@@ -446,7 +454,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
                 );
             }
 
-            $rows = $wpdb->get_results("SELECT 'SYNC_CREATED_OK' AS `key`, `event_user` AS `user`, `event_error` AS `error`, `event_timestamp` AS `time` FROM $table_name WHERE $where_clause LIMIT 25 OFFSET $start_row");
+            $rows = $wpdb->get_results("SELECT 'SYNC_CREATED_OK' AS `key`, `event_user` AS `user`, `event_data` AS `data`, `event_error` AS `error`, `event_timestamp` AS `time` FROM $table_name WHERE $where_clause LIMIT 25 OFFSET $start_row");
 
             if (!empty($wpdb->last_error)) {
                 $error = sprintf('%s -> An error occurred when trying retrieve insights [error: %s]', __METHOD__, $wpdb->last_error);
@@ -571,7 +579,7 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
          * 
          * @since 3.0
          * 
-         * @return void
+         * @return string
          */
         private static function get_events_table_name()
         {
@@ -637,6 +645,34 @@ if (!class_exists('\Wpo\Services\Event_Service')) {
             }
 
             return $user;
+        }
+
+        /**
+         * Tries to get SCIM attributes from current context and return those as JSON.
+         * 
+         * @since 31.1
+         * 
+         * @return string 
+         */
+        private static function get_scim_attributes()
+        {
+            $request_service = Request_Service::get_instance();
+            $request = $request_service->get_request($GLOBALS['WPO_CONFIG']['request_id']);
+            $scim_attributes = $request->get_item('scim_attributes');
+
+            if (is_array($scim_attributes)) {
+                $as_json = json_encode($scim_attributes);
+
+                if (!empty($as_json)) {
+                    return $as_json;
+                }
+
+                $err_message = json_last_error_msg();
+                Log_Service::write_log('WARN', sprintf('%s -> Could not encode SCIM attributes as JSON [%s]', __METHOD__, $err_message));
+                Log_Service::write_log('DEBUG', $scim_attributes);
+            }
+
+            return null;
         }
     }
 }

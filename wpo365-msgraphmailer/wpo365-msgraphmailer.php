@@ -4,7 +4,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 2.35
+ *  Version: 2.36
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
@@ -80,10 +80,7 @@ if (!class_exists('\Wpo\MsGraphMailer')) {
         private function add_wp_hooks()
         {
             // Plugin updater and license checker
-            // Plugin updater and license checker
-            if (class_exists('\Wpo\Core\Plugin_Updater')) {
-                \Wpo\Core\Plugin_Updater::add_hooks();
-            }
+            add_filter('pre_set_site_transient_update_plugins', '\Wpo\Core\Plugin_Helpers::check_for_updates', 10, 1);
 
             // Do super admin stuff
             if ((is_admin() || is_network_admin()) && Permissions_Helpers::user_is_admin(\wp_get_current_user())) {
@@ -134,13 +131,18 @@ if (!class_exists('\Wpo\MsGraphMailer')) {
                 add_filter((is_network_admin() ? 'network_admin_' : '') . 'plugin_action_links_' . $GLOBALS['WPO_CONFIG']['plugin'], '\Wpo\Core\Plugin_Helpers::get_configuration_action_link', 10, 1);
 
                 // Add license related messages to WP Admin
-                \Wpo\Core\Plugin_Updater::show_license_notices();
+                \Wpo\Core\Plugin_Helpers::show_license_notices();
 
                 //  Ensure WP Cron job to check for each registered application whether its secret will epxire soon is added.
 
                 if (class_exists('\Wpo\Services\Password_Credentials_Service')) {
                     \Wpo\Services\Password_Credentials_Service::ensure_check_password_credentials_expiration();
                 }
+
+                // To force WordPress to check for plugin updates if requested by an administrator
+                add_action('admin_post_wpo365_force_check_for_plugin_updates', '\Wpo\Core\Plugin_Helpers::force_check_for_plugin_updates');
+                add_filter('plugin_row_meta', '\Wpo\Core\Plugin_Helpers::show_old_version_warning', 10, 2);
+                add_filter('plugins_api', '\Wpo\Core\Plugin_Helpers::plugin_info', 20, 3);
             } // End of admin stuff
 
             //  WP Cron job triggered action to check for each registered application whether its secret will epxire soon.
@@ -150,7 +152,7 @@ if (!class_exists('\Wpo\MsGraphMailer')) {
             add_filter('cron_schedules', '\Wpo\Core\Cron_Helpers::add_cron_schedules', 10, 1);
 
             // Clean up on shutdown
-            add_action('shutdown', '\Wpo\Services\Request_Service::shutdown');
+            add_action('shutdown', '\Wpo\Services\Request_Service::shutdown', PHP_INT_MAX);
 
             add_action('admin_enqueue_scripts', '\Wpo\Core\Script_Helpers::enqueue_wizard', 10, 0);
 
