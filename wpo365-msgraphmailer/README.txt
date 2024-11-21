@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.6
-Stable tag: 2.38
+Stable tag: 2.39
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -114,24 +114,22 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 
 == Changelog ==
 
-= v2.38 =
+= v2.39 =
+* Improvement: Developers can now filter the parameters used to build the authorization URL / token URL.
 
+= v2.38 =
 * Fix: Non-specific technical improvements.
 
 = v2.37 =
-
 * Fix: Non-specific technical improvements.
 
 = v2.36 =
-
 * Fix: Non-specific technical improvements.
 
 = v2.35 =
-
 * Fix: Non-specific technical improvements.
 
 = v2.34 =
-
 * Improvement: The HelpScout beacon on the plugin's configuration pages would be blocked from loading - for example when using Microsoft Edge - and has therefore been replaced with a new help button that opens the WPO365 Contact Form instead.
 * Fix: The default value for the redirect URL now again corresponds to the site's home URL.
 * Fix: Some WP Cron Jobs that rely on a custom cron schedule "wpo-every-minute" e.g. Auto-Retry for sending emails and User Sync Monitor to ensure user synchronization keeps running, should no longer be removed when the custom schedule is not found. [PREMIUM]
