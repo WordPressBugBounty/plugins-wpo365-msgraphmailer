@@ -2,8 +2,8 @@
 Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
-Tested up to: 6.6
-Stable tag: 2.39
+Tested up to: 6.7
+Stable tag: 3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -113,6 +113,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= v3.0 =
+* Change: The PHPSECLIB v3 library has been updated to the latest version 3.0.43 and any customizations have been abandonned.
+* Fix: Sending a test email from the "Mail" configuration page will no longer delete all cached (user) access tokens.
 
 = v2.39 =
 * Improvement: Developers can now filter the parameters used to build the authorization URL / token URL.
