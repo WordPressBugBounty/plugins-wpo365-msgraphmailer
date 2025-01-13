@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 3.0
+Stable tag: 3.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,6 +20,7 @@ The plugin re-configures your WordPress website to send emails using the **Micro
 
 - Send WordPress transactional emails from one of your **Microsoft 365 Exchange Online / Mail enabled accounts** using Microsoft Graph instead of - for example - SMTP.
 - Choose between delegated (send mail as a user) and application-level (send mail as any user) type permissions.
+- Select either a Microsoft 365 account or a personal Microsoft account, like Hotmail.com or Outlook.com, to send WordPress emails.
 
 = SEND AS HTML =
 
@@ -113,6 +114,11 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= v3.1 =
+* Improvement: You can now choose between a Microsoft 365 account or a personal Microsoft account, like Hotmail.com or Outlook.com, to send WordPress emails. See the [updated tutorial](https://tutorials.wpo365.com/courses/email-configure-microsoft-graph-mailer/lessons/send-email-from-a-personal-microsoft-account-e-g-hotmail-com/) for details.
+* Fix: Plugin no longer (falsely) reports an error when enabling the auto-retry mail-send functionality fails. Instead, it generates a warning with a more verbose description. [MAIL]
+* Fix: The plugin now properly URL encodes a user's UPN when trying to submit email messages to Microsoft Graph. [LOGIN, MICROSOFT GRAPH MAILER
 
 = v3.0 =
 * Change: The PHPSECLIB v3 library has been updated to the latest version 3.0.43 and any customizations have been abandonned.

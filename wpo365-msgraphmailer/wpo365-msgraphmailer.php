@@ -4,7 +4,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 3.0
+ *  Version: 3.1
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
