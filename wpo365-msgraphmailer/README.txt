@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 3.2
+Stable tag: 3.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -114,6 +114,12 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= v3.3 =
+* Improvement: All source-code is now constantly reviewed for violations of coding standards (using phpcs) and if possible corrected to adhere to the WordPress Coding Standards.
+* Fix: Functionality to save the state before the user is sent to Microsoft to authenticate and to read that state when the user returns has been refactored, to ensure redirection back to the "intended" location before WPO365 sent the user to Microsoft is working as expected.
+* Fix: WPO365 will no longer show a "doing_it_wrong" warning when installed for the very first time.
+* Fix: During the previous release, premium plugins were not zipped correctly, causing issues with folder-naming when installing. [ALL PREMIUM]
 
 = v3.2 =
 * Fix: (Composer) Dependencies have been updated to remove the requirement for PHP >= 8.0.0.
