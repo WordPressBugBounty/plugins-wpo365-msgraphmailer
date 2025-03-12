@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 3.3
+Stable tag: 3.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -114,6 +114,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= v3.4 =
+* Fix: The TLD "lan" has been added to the license-checker list of exceptions.
+* Fix: An issue causing - under specific circumstances - an "array-to-string conversion" warning in the Url_Helpers class has been resolved.
 
 = v3.3 =
 * Improvement: All source-code is now constantly reviewed for violations of coding standards (using phpcs) and if possible corrected to adhere to the WordPress Coding Standards.
@@ -330,3 +334,4 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 
 = 1.0 =
 * Initial version.
+
