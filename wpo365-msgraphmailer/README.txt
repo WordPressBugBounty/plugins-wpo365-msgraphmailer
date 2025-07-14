@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.5
+Stable tag: 3.6
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,7 +20,8 @@ The plugin re-configures your WordPress website to send emails using the **Micro
 
 - Send WordPress transactional emails from one of your **Microsoft 365 Exchange Online / Mail enabled accounts** using Microsoft Graph instead of - for example - SMTP.
 - Choose between delegated (send mail as a user) and application-level (send mail as any user) type permissions.
-- Select either a Microsoft 365 account or a personal Microsoft account, like Hotmail.com or Outlook.com, to send WordPress emails.
+- Or: Select either a Microsoft 365 account or a personal Microsoft account, like Hotmail.com or Outlook.com, to send WordPress emails.
+- Or: Configure [RBAC for Exchange Online](https://learn.microsoft.com/en-us/Exchange/permissions-exo/application-rbac) and authorize as an application but with a limited scope e.g. one specific mailbox.
 
 = SEND AS HTML =
 
@@ -114,6 +115,11 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= v3.6 =
+* Improvement: The built-in WordPress Mailer for Microsoft Graph now supports [RBAC for Exchange Online](https://learn.microsoft.com/en-us/Exchange/permissions-exo/application-rbac). As a result, administrators should now explicitely configure the desired authorization scenario, as explained in a [new lesson in the tutorial](https://tutorials.wpo365.com/courses/email-configure-microsoft-graph-mailer/lessons/select-authorization-scenario/).
+* Improvement: All scripts now are created using either wp_print_script_tag or wp_print_inline_script_tag. As a result, developers can add your own nonce attribute using the wp_script_attributes and wp_inline_script_attributes filters e.g. to enable a Content-Security-Policy (or CSP).
+* Fix: For premium plugins, WPO365 would check the license status with every admin request, which could slow down your site unnecessarily. [MAIL]
 
 = v3.5 =
 * Improvement: Confirms support for WordPress 6.8.
