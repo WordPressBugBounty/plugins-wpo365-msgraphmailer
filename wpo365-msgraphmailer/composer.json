@@ -21,6 +21,7 @@
     "psr-4": {
       "Wpo\\": "",
       "Wpo\\Core\\": "Core",
+      "Wpo\\Insights\\": "Insights",
       "Wpo\\Mail\\": "Mail",
       "Wpo\\Pages\\": "Pages",
       "Wpo\\Services\\": "Services"

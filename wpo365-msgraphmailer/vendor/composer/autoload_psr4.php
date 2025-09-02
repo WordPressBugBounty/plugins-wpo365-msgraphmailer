@@ -10,6 +10,7 @@ return array(
     'Wpo\\Services\\' => array($baseDir . '/Services'),
     'Wpo\\Pages\\' => array($baseDir . '/Pages'),
     'Wpo\\Mail\\' => array($baseDir . '/Mail'),
+    'Wpo\\Insights\\' => array($baseDir . '/Insights'),
     'Wpo\\Core\\' => array($baseDir . '/Core'),
     'Wpo\\' => array($baseDir . '/'),
     'ParagonIE\\ConstantTime\\' => array($vendorDir . '/paragonie/constant_time_encoding/src'),

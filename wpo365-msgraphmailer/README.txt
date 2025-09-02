@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.7
+Stable tag: 4.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -35,6 +35,10 @@ The plugin re-configures your WordPress website to send emails using the **Micro
 
 - Send files from your WordPress website as *attachments*. 
 
+= WPO365 INSIGHTS =
+
+- **See what matters, when it happens** Track key WPO365 events like sent emails with WPO365 Insights [more](https://docs.wpo365.com/article/210-wpo365-insights)
+
 = CONFIGURATION / TEST EMAIL DELIVERY =
 
 - Easy configuration with detailed step-by-step [Getting started](https://docs.wpo365.com/article/141-send-email-using-microsoft-graph-mailer) guide and video.
@@ -45,6 +49,10 @@ https://youtu.be/1CK7Fl8f8iA
 **ADD FUNCTIONALITY WITH PREMIUM EXTENSIONS**
 
 The following features can be unlocked with the [WPO365 | MAIL](https://www.wpo365.com/downloads/wpo365-mail/) extension.
+
+= WPO365 INSIGHTS =
+
+- Get **WPO35 Alerts** in your inbox when email delivery is failing [more](https://docs.wpo365.com/article/210-wpo365-insights)
 
 = Auto-Retry =
 
@@ -115,6 +123,14 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 4.0 =
+
+= v38.0 =
+* Feature: **See what matters, when it happens** Track key WPO365 events like sent emails with **WPO365 Insights** and get alerted when when a critical WPO365 event occurs. Consult the [updated documentation](https://docs.wpo365.com/article/210-wpo365-insights) for instructions how to configure WPO365 Alerts. [ALL PREMIUM]
+* Improvement: A new **Daily WPO365 Insights** widget has been added to the WP Admin Dashboard, informing administrator about key WPO365 events like logins, sent emails and user creation and updates. Refer to the [update documentation](https://docs.wpo365.com/article/210-wpo365-insights) for further details or how to hide the widget. [ALL]
+* Fix: The plugin checks whether the request parameter with the key idp_id was added by WPO365, and ignores it if not. [ALL PREMIUM]
+* Fix: Addressed various technical problems to enhance plugin reliability. [ALL]
 
 = v3.7 =
 * Fix: WPO365 will avoid using "wp_print_inline_script_tag" and instead create a <script> tag itself, if the active WordPress theme does not declare support for the 'html5' and 'script' features. [ALL]

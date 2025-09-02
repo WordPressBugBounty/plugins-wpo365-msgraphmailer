@@ -3,7 +3,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 3.7
+ *  Version: 4.0
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
@@ -102,6 +102,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 				add_action( 'wp_ajax_wpo365_get_insights_summary', '\Wpo\Services\Ajax_Service::get_insights_summary' );
 				add_action( 'wp_ajax_wpo365_get_insights', '\Wpo\Services\Ajax_Service::get_insights' );
 				add_action( 'wp_ajax_wpo365_truncate_insights_data', '\Wpo\Services\Ajax_Service::truncate_insights_data' );
+				add_action( 'wp_ajax_wpo365_send_test_alert', '\Wpo\Services\Ajax_Service::send_test_alert' );
 
 				// Graph mailer
 				add_action( 'wp_ajax_wpo365_send_test_mail', '\Wpo\Services\Ajax_Service::send_test_mail' );
@@ -137,7 +138,30 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 				add_action( 'admin_post_wpo365_force_check_for_plugin_updates', '\Wpo\Core\Plugin_Helpers::force_check_for_plugin_updates' );
 				add_filter( 'plugin_row_meta', '\Wpo\Core\Plugin_Helpers::show_old_version_warning', 10, 2 );
 				add_filter( 'plugins_api', '\Wpo\Core\Plugin_Helpers::plugin_info', 20, 3 );
+
+				// Set up the dashboard widget.
+				add_action( 'wp_dashboard_setup', '\Wpo\Insights\Dashboard_Service::insights_widget' );
 			} // End of admin stuff
+
+			if ( Options_Service::get_global_boolean_var( 'insights_alerts_enabled' ) && class_exists( '\Wpo\Insights\Event_Notify_Service' ) ) {
+				add_action(
+					'wpo365/insights/notify',
+					function ( $message, $category = 'N/A', $recipient = '' ) {
+						$nofications = new \Wpo\Insights\Event_Notify_Service();
+						$nofications->notify( $message, $category, $recipient );
+					},
+					10,
+					3
+				);
+
+				add_action(
+					'wpo365_insights_check_failed_notifications',
+					function () {
+						$nofications = new \Wpo\Insights\Event_Notify_Service();
+						$nofications->check_failed_notifications();
+					}
+				);
+			}
 
 			// WP Cron job triggered action to check for each registered application whether its secret will epxire soon.
 			add_action( 'wpo_check_password_credentials_expiration', '\Wpo\Services\Password_Credentials_Service::check_password_credentials_expiration' );
@@ -190,8 +214,10 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 
 			// To collect Insights
 			if ( Options_Service::get_global_boolean_var( 'insights_enabled', false ) ) {
-				add_action( 'wpo365/mail/sent', '\Wpo\Services\Event_Service::mail_sent__handler', 10, 1 );
-				add_action( 'wpo365/mail/sent/fail', '\Wpo\Services\Event_Service::mail_sent_fail__handler', 10, 1 );
+				add_action( 'wpo365/mail/sent', '\Wpo\Insights\Event_Service::mail_sent__handler', 10, 1 );
+				add_action( 'wpo365/mail/sent/fail', '\Wpo\Insights\Event_Service::mail_sent_fail__handler', 10, 1 );
+				add_action( 'wpo365/alert/submitted', '\Wpo\Insights\Event_Service::notification_sent__handler', 10, 3 );
+				add_action( 'wpo365/alert/submitted/fail', '\Wpo\Insights\Event_Service::notification_sent_fail__handler', 10, 3 );
 			}
 
 			// To collect cURL logging
