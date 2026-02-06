@@ -2,8 +2,8 @@
 Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
-Tested up to: 6.8
-Stable tag: 4.0
+Tested up to: 6.9
+Stable tag: 4.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -124,9 +124,18 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 
 == Changelog ==
 
+= 4.2 =
+
+* Security Fix: A Server Side Request Forgery (SSRF) vulnerability has been patched. [ALL]
+* Improvement: Confirms support for WordPress 6.9. [ALL]
+
+= 4.1 =
+
+* Improvement: When emails are successfully sent during a retry, the corresponding error message is removed, and the error count on the WPO365 | INSIGHTS Dashboard is updated accordingly.
+* Improvement: Sending WordPress emails via Microsoft Graph is now supported for **GCC High tenants**.
+
 = 4.0 =
 
-= v38.0 =
 * Feature: **See what matters, when it happens** Track key WPO365 events like sent emails with **WPO365 Insights** and get alerted when when a critical WPO365 event occurs. Consult the [updated documentation](https://docs.wpo365.com/article/210-wpo365-insights) for instructions how to configure WPO365 Alerts. [ALL PREMIUM]
 * Improvement: A new **Daily WPO365 Insights** widget has been added to the WP Admin Dashboard, informing administrator about key WPO365 events like logins, sent emails and user creation and updates. Refer to the [update documentation](https://docs.wpo365.com/article/210-wpo365-insights) for further details or how to hide the widget. [ALL]
 * Fix: The plugin checks whether the request parameter with the key idp_id was added by WPO365, and ignores it if not. [ALL PREMIUM]
