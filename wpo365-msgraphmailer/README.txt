@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 5.0
+Stable tag: 5.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -124,7 +124,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 
 == Changelog ==
 
-= 5.0 =
+= 5.0.1 =
+* Fix: Prevented duplicate or incorrect type attributes on script tags, which could cause "Cannot use import statement outside a module" errors. [MAILER]
+
+= 5.0.0 =
 * Change: Redesigned the menu of the plugin's Configuration Pages - new with a new vertical navigation, Redesigned the plugin menu with a new vertical navigation, improving clarity and access to features. [ALL]
 * Improvement: To align with Microsoft’s current branding, Azure AD has been renamed to Microsoft Entra ID throughout the plugin, and all portal links now open in entra.microsoft.com. [ALL]
 * Fix: Fixed an issue in the stand‑alone WPO365 | MICROSOFT GRAPH MAILER plugin and tested and confirmed compatibility with GCC High tenants. [MAILER]
