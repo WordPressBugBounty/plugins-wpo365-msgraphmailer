@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 5.2
+Stable tag: 5.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -123,6 +123,11 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.3 =
+* Fix: The Mail Log Viewer now reliably displays attachment names without crashing.
+* Fix: Corrected an issue that could cause a crash while generating client secret expiration warning emails.
+* Fix: Resolved a "Failed to execute 'querySelector' on 'Document'" error in the wizard app triggered by invalid auto-generated element IDs.
 
 = 5.2 =
 * Fix: Automatically disables SSO when the mail function is invoked in the context of the WPO365 | MICROSOFT GRAPH MAILER plugin (preventing the plugin from logging unconfigured-warnings). [MAILER].
