@@ -2,8 +2,8 @@
 Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
-Tested up to: 6.9
-Stable tag: 5.3
+Tested up to: 7.0
+Stable tag: 5.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -58,10 +58,13 @@ The following features can be unlocked with the [WPO365 | MAIL](https://www.wpo3
 
 - **Log every email** sent from your WordPress website, review errors and (automatically) try to send unsuccessfully **sent mails again**.
 
-
 = LARGE ATTACHMENTS =
 
 - Add support to send WordPress emails with **attachments larger than 3 MB** using Microsoft Graph.
+
+= SEND FROM ALIAS =
+
+- Send emails from an **alias address** (but submit to Microsoft Graph as the authorized user).
 
 = SEND AS / SEND ON BEHALF OF =
 
@@ -123,6 +126,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.4 =
+* Improvement: You can now send emails from **alias addresses** when using Microsoft Graph, enabling more tailored and professional communication. Please note that this is a premium function. Consult the [online documentation](https://docs.wpo365.com/article/231-send-from-an-alias-email-address) for details.
+* Support for WordPress 7.0.
 
 = 5.3 =
 * Fix: The Mail Log Viewer now reliably displays attachment names without crashing.
