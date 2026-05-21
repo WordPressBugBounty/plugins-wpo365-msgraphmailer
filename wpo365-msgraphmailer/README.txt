@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 5.4
+Stable tag: 5.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,6 +126,9 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.5 =
+* Improvement: Redirection to Microsoft for SSO / Authorization now consistently routes through the plugin’s custom endpoint **/wpo/sso/start**. This allows administrators to **exclude a single endpoint from caching**, ensuring reliable nonce verification and preventing cache-related errors such as “Your login has been tampered with”. Read this [article](https://www.wpo365.com/news/improved-reliability-and-security-for-single-sign-on-sso/) to get a better understanding. [LOGIN, MAILER, ESSENTIALS, PROFESSIONAL, CUSTOMERS, INTEGRATE (LOGIN+, SYNC, INTRANET)]
 
 = 5.4 =
 * Improvement: You can now send emails from **alias addresses** when using Microsoft Graph, enabling more tailored and professional communication. Please note that this is a premium function. Consult the [online documentation](https://docs.wpo365.com/article/231-send-from-an-alias-email-address) for details.
