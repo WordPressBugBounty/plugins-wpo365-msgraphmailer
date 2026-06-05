@@ -23,6 +23,13 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 
 
 		public static function has_route() {
+
+			// If we detect interim-login then redirect to homepage to force WordPress fallback to "Session expired" UI.
+			if ( isset( $_REQUEST['interim-login'] ) && (string) $_REQUEST['interim-login'] === '1' ) { // phpcs:ignore
+				wp_safe_redirect( home_url() );
+				exit;
+			}
+
 			// initiate openidconnect / saml flow
 			if ( ! empty( $_REQUEST['action'] ) && $_REQUEST['action'] === 'openidredirect' ) { // phpcs:ignore
 				add_action( 'init', '\Wpo\Services\Router_Service::route_openidredirect' );
@@ -484,27 +491,39 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 		 *
 		 * @return bool
 		 */
-		private static function detect_sso_start_endpoint() {
-			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : ''; // phpcs:ignore
-
-			if ( empty( $request_uri ) ) {
+		public static function detect_sso_start_endpoint() {
+			// 1) Bail out early.
+			if ( is_admin() ) {
 				return false;
 			}
 
-			$path      = wp_parse_url( $request_uri, PHP_URL_PATH );
-			$path      = rtrim( $path, '/' );
-			$site_path = rtrim( $GLOBALS['WPO_CONFIG']['url_info']['wp_site_path'], '/' );
-			$sso_path  = $site_path . '/wpo/sso/start';
+			// 2) Preferred: rely on WP parsed query vars (only valid after parse_request).
+			global $wp;
 
-			if ( strcasecmp( $path, $sso_path ) === 0 ) {
+			if ( $wp && ! empty( $wp->query_vars ) ) {
+				// query vars are strings in most cases
+				if ( isset( $wp->query_vars['wpo_sso_start'] ) && $wp->query_vars['wpo_sso_start'] === '1' ) {
+					return true;
+				}
+			}
+
+			// 3) Plain permalinks / direct query fallback.
+			if ( isset( $_GET['wpo_sso_start'] ) && $_GET['wpo_sso_start'] === '1' ) { // phpcs:ignore
 				return true;
 			}
 
-			// Fallback: query-parameter form /?wpo_sso_start=1, used when plain
-			// permalinks are active (no server catch-all routes /wpo/sso/start to
-			// index.php) or when WordPress internally rewrites the pretty URL via
-			// the registered rewrite rule (which adds wpo_sso_start=1 to $_GET).
-			return isset( $_GET['wpo_sso_start'] ) && $_GET['wpo_sso_start'] === '1'; // phpcs:ignore
+			// 4) Last resort: strict path match (segment-accurate, not substring).
+			$request_uri = ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : ''; // phpcs:ignore
+
+			if ( $request_uri === '' ) {
+				return false;
+			}
+
+			$path = (string) wp_parse_url( $request_uri, PHP_URL_PATH ) ?? '';
+			$path = rtrim( $path, '/' );
+
+			// Match ".../wpo/sso/start" at end of path, optionally preceded by any segments (/en, /foo, etc.).
+			return (bool) preg_match( '#(^|/)wpo/sso/start$#i', $path );
 		}
 
 		/**
