@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 5.6
+Stable tag: 5.7
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,6 +126,9 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.7 =
+* Fix: Fixed broken and outdated links in the plugin wizard.
 
 = 5.6 =
 * Fix: Updated phpseclib to version 3.0.52 (was 3.0.43), which patches [CVE-2026-44167](https://app.opencve.io/cve/CVE-2026-44167).
