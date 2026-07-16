@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 5.8
+Stable tag: 5.9
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,6 +126,9 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.9 =
+* Security Fix: Strengthened verification of certain AJAX requests to help prevent unauthorized changes to plugin settings.
 
 = 5.8 =
 * Fix: Refactored and updated core elements to improve overall security, maintainability and resilience. No functional changes.

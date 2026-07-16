@@ -391,6 +391,18 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 			}
 
 			// Perform a safe redirect (only allows same-host by default).
+
+			if ( headers_sent() ) {
+				echo '<script type="text/javascript">';
+				printf( 'window.location.href="%s"', wp_kses( $target, WordPress_Helpers::get_allowed_html() ) );
+				echo '</script>';
+				echo '<noscript>';
+				printf( '<meta http-equiv="refresh" content="0;url=%s" />', wp_kses( $target, WordPress_Helpers::get_allowed_html() ) );
+				echo '</noscript>';
+				exit();
+			}
+
+			nocache_headers();
 			wp_safe_redirect( $target );
 			exit;
 		}
@@ -943,7 +955,7 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 				'error_page_url'    => Options_Service::get_global_string_var( 'error_page_url' ),
 				'custom_login_url'  => Options_Service::get_global_string_var( 'custom_login_url' ),
 				'default_login_url' => wp_login_url(),
-				'admin_ajax_url'    => site_url( 'admin-ajax.php' ),
+				'admin_ajax_url'    => admin_url( 'admin-ajax.php' ),
 				'wp_cron_url'       => site_url( 'wp-cron.php' ),
 				'favicon_url'       => home_url( 'favicon.ico' ),
 				'xmlrpc'            => home_url( 'xmlrpc.php' ),
