@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 5.9
+Stable tag: 5.10
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,6 +126,9 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 2. Mail audit log
 
 == Changelog ==
+
+= 5.10 =
+* Fix: Fixed an issue where a double forward slash inside a query string value (e.g. "https://" within a redirect_to parameter) could be incorrectly collapsed to a single slash while the plugin sanitized the current request URL, which could prevent users from authorizing successfully. [LOGIN, MAILER]
 
 = 5.9 =
 * Security Fix: Strengthened verification of certain AJAX requests to help prevent unauthorized changes to plugin settings.
