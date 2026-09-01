@@ -2,8 +2,8 @@
 Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
-Tested up to: 7.0
-Stable tag: 5.10
+Tested up to: 7.1
+Stable tag: 6.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -22,6 +22,9 @@ The plugin re-configures your WordPress website to send emails using the **Micro
 - Choose between delegated (send mail as a user) and application-level (send mail as any user) type permissions.
 - Or: Select either a Microsoft 365 account or a personal Microsoft account, like Hotmail.com or Outlook.com, to send WordPress emails.
 - Or: Configure [RBAC for Exchange Online](https://learn.microsoft.com/en-us/Exchange/permissions-exo/application-rbac) and authorize as an application but with a limited scope e.g. one specific mailbox.
+- Daily refresh of Microsoft Graph access and refresh token.
+- Auto-flagging and suppression of duplicate emails.
+- Auto-retry when throttled (HTTP 429).
 
 = SEND AS HTML =
 
@@ -122,10 +125,20 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 == Frequently Asked Questions ==
 
 == Screenshots ==
-1. Configuration page
-2. Mail audit log
+1. Send WordPress emails using Microsoft Graph (configuration).
+2. Mail audit log with Preview.
+3. WPO365 Insights to see what matters when it happens.
+4. Premium configuration options.
 
 == Changelog ==
+
+= 6.0 =
+
+* Support for WordPress 7.1.
+* The plugin will now - on a daily base - automatically refresh the Microsoft Graph mail connection's access and refresh token, so outgoing mail no longer risks failing due to a long-expired token after periods of low activity. Consult the update [tutorial](https://tutorials.wpo365.com/courses/email-configure-microsoft-graph-mailer/lessons/update-wpo365-authorize-connect-to-microsoft-graph/)
+* Added automatic detection and suppression of duplicate outgoing emails sent within a short time window. [Read more](https://tutorials.wpo365.com/courses/email-configure-microsoft-graph-mailer/lessons/improve-the-reliability-of-sending-wordpress-emails/)
+* The plugin's built-in "Send WordPress emails using Microsoft Graph" feature nows honor a "Retry-After" header - when Microsoft Graph throttles a request - with a short automatic retry, instead of failing immediately. [Read more](https://tutorials.wpo365.com/courses/email-configure-microsoft-graph-mailer/lessons/improve-the-reliability-of-sending-wordpress-emails/)
+* The existing "obfuscate Entra ID options" switch - that will delete sensitive Entra ID settings from the database once they're defined in 'wp-config.php' when toggled on - is now capable of automatically restoring those settings if switched off again. [Read more](https://tutorials.wpo365.com/courses/wp-config-php-single-identity-provider-idp/lessons/delete-sensitive-entra-id-options-from-the-database/)
 
 = 5.10 =
 * Fix: Fixed an issue where a double forward slash inside a query string value (e.g. "https://" within a redirect_to parameter) could be incorrectly collapsed to a single slash while the plugin sanitized the current request URL, which could prevent users from authorizing successfully. [LOGIN, MAILER]

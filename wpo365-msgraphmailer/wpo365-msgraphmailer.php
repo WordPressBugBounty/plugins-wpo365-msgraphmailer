@@ -3,7 +3,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 5.10
+ *  Version: 6.0
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
@@ -28,6 +28,10 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 	class MsGraphMailer {
 
 
+		/**
+		 *
+		 * @var \Wpo\Services\Dependency_Service
+		 */
 		private $dependencies;
 
 		private $no_conflict = true;
@@ -36,6 +40,10 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			$this->deactivation_hooks();
 			add_action( 'plugins_loaded', array( $this, 'load' ), 1 );
 			add_filter( 'cron_schedules', '\Wpo\Core\Cron_Helpers::add_cron_schedules', 10, 1 ); // phpcs:ignore
+		}
+
+		public function get_plugin_url() {
+			return plugin_dir_url( __FILE__ );
 		}
 
 		public function load() {
@@ -103,6 +111,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 				add_action( 'wp_ajax_wpo365_get_insights', '\Wpo\Services\Ajax_Service::get_insights' );
 				add_action( 'wp_ajax_wpo365_truncate_insights_data', '\Wpo\Services\Ajax_Service::truncate_insights_data' );
 				add_action( 'wp_ajax_wpo365_send_test_alert', '\Wpo\Services\Ajax_Service::send_test_alert' );
+				add_action( 'wp_ajax_wpo365_obfuscate_sensitive_options', '\Wpo\Services\Ajax_Service::obfuscate_sensitive_options' );
 
 				// Graph mailer
 				add_action( 'wp_ajax_wpo365_send_test_mail', '\Wpo\Services\Ajax_Service::send_test_mail' );
@@ -133,6 +142,9 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 				if ( class_exists( '\Wpo\Services\Password_Credentials_Service' ) ) {
 					\Wpo\Services\Password_Credentials_Service::ensure_check_password_credentials_expiration();
 				}
+
+				// Ensure WP Cron job to obtain a new mail refresh token once a day is added.
+				\Wpo\Mail\Mail_Authorization_Helpers::ensure_get_mail_refresh_token();
 
 				// To force WordPress to check for plugin updates if requested by an administrator
 				add_action( 'admin_post_wpo365_force_check_for_plugin_updates', '\Wpo\Core\Plugin_Helpers::force_check_for_plugin_updates' );
@@ -165,6 +177,9 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 
 			// WP Cron job triggered action to check for each registered application whether its secret will epxire soon.
 			add_action( 'wpo_check_password_credentials_expiration', '\Wpo\Services\Password_Credentials_Service::check_password_credentials_expiration' );
+
+			// WP Cron job triggered action to obtain a new mail refresh token once a day.
+			add_action( 'wpo365_get_mail_refresh_token', '\Wpo\Mail\Mail_Authorization_Helpers::get_mail_refresh_token' );
 
 			// Clean up on shutdown
 			add_action( 'shutdown', '\Wpo\Services\Request_Service::shutdown', PHP_INT_MAX );
@@ -215,7 +230,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			// To collect Insights
 			if ( Options_Service::get_global_boolean_var( 'insights_enabled', false ) ) {
 				add_action( 'wpo365/mail/sent', '\Wpo\Insights\Event_Service::mail_sent__handler', 10, 1 );
-				add_action( 'wpo365/mail/sent/fail', '\Wpo\Insights\Event_Service::mail_sent_fail__handler', 10, 1 );
+				add_action( 'wpo365/mail/sent/fail', '\Wpo\Insights\Event_Service::mail_sent_fail__handler', 10, 2 );
 				add_action( 'wpo365/alert/submitted', '\Wpo\Insights\Event_Service::notification_sent__handler', 10, 3 );
 				add_action( 'wpo365/alert/submitted/fail', '\Wpo\Insights\Event_Service::notification_sent_fail__handler', 10, 3 );
 			}
@@ -248,6 +263,15 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 					}
 				);
 			}
+
+			// Delete the mail refresh token cron job
+			register_deactivation_hook(
+				__FILE__,
+				function () {
+					wp_clear_scheduled_hook( 'wpo365_get_mail_refresh_token' );
+					delete_site_transient( 'wpo365_get_mail_refresh_token_hook_ensured' );
+				}
+			);
 
 			register_deactivation_hook(
 				__FILE__,
