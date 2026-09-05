@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.0
+Stable tag: 6.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.1 =
+
+* Fix: Microsoft's infrastructure is currently incompatible with OpenSSL 3.5 and higher's new default settings (as shipped with e.g. Debian 13), which could make sending emails via Microsoft Graph unexpectedly fail with a "Not Found" error on affected web hosts (e.g. IONOS / Fasthosts) - the plugin now automatically detects this and works around it.
 
 = 6.0 =
 
