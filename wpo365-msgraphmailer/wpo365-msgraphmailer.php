@@ -3,7 +3,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 6.1
+ *  Version: 6.2
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
@@ -13,6 +13,7 @@ namespace Wpo;
 
 require __DIR__ . '/vendor/autoload.php';
 
+use Wpo\Core\Compatibility_Helpers;
 use Wpo\Core\Globals;
 use Wpo\Core\Permissions_Helpers;
 use Wpo\Services\Dependency_Service;
@@ -60,13 +61,14 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			Globals::set_global_vars( __FILE__, __DIR__ );
 			$this->cache_dependencies();
 			Options_Service::ensure_options_cache();
+			Compatibility_Helpers::upgrade_actions( 'wpo365_msgraphmailer' );
 			$this->update_request_log();
 			$this->add_wp_hooks();
 			Router_Service::has_route();
 		}
 
 		public function ensure_wpo365_login() {
-			echo '<div class="notice notice-error" style="margin-left: 2px;"><p>'
+			echo '<div class="notice notice-error" style="margin-left: 2px; background-color: #ffffff;"><p>'
 				. 'The <strong>WPO365 | MS GRAPH MAILER</strong> plugin has detected that you have also installed the <strong>WPO365 | LOGIN</strong> plugin. '
 				. 'Since that plugin offers the same functionality <a href="https://www.wpo365.com/features/" target="_blank">plus a lot more</a> and uses the '
 				. 'same configuration-source, the <em>Microsoft Graph Mailer</em> of the <strong>WPO365 | LOGIN</strong> plugin will be used instead. '

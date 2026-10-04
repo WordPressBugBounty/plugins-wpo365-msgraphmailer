@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.1
+Stable tag: 6.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,13 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.2 =
+
+* Security: Fixed a cross-site scripting (XSS) vulnerability.
+* Security: Hardened the "Licenses" page. License requests to wpo365.com now also verify the server's SSL certificate, unless "Skip SSL host verification" is checked on the plugin's "Miscellaneous" configuration page.
+* Security: The ID token received while authorizing the mail account is now always checked for the right issuer and audience.
+* Fix: License keys are now saved in the database only. Any license key in your wp-config.php overrides (WPO_OVERRIDES) will be automatically copied to the database once and then ignored.
 
 = 6.1 =
 
