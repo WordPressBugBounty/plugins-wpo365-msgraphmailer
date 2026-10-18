@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.2
+Stable tag: 6.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,15 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.3 =
+
+* Fix: When a WordPress session expires, WordPress' own login prompt appears again, instead of the website's home page opening in that prompt.
+* Security: Hardened how WPO365 processes the response of a mail authorization.
+* Security: Fixed a cross-site scripting (XSS) vulnerability.
+* Improvement: When a mail authorization fails because a nonce could not be verified, WPO365 now writes to its log why (e.g. the authorization link had been used before, or was not created by this website).
+* Fix: On WordPress multisite networks, activating, deactivating or updating a WPO365 premium plugin network-wide now refreshes every site's list of active premium plugins, so that the premium options appear in each site's configuration.
+* Fix: For a "Government GCC (High)" tenant, WPO365 now reads the expiration date of the application secret from graph.microsoft.us instead of graph.microsoft.com, where the request failed with "SecurityTokenInvalidCloudInstanceException".
 
 = 6.2 =
 

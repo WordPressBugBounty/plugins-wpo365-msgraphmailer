@@ -28,7 +28,7 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 		 *
 		 * @return  boolean         True in case value found equals 1, "1", "true" or true, otherwise false.
 		 */
-		public static function get_global_boolean_var( $name, $log = true ) {
+		public static function get_global_boolean_var( $name ) {
 			$request_service = Request_Service::get_instance();
 			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 			$wpo_aad         = $request->get_item( 'wpo_aad' );
@@ -37,7 +37,7 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 				return $wpo_aad[ $name ];
 			}
 
-			$var = self::get_global_var( $name, $log );
+			$var = self::get_global_var( $name );
 
 			return ( $var === true
 				|| $var === '1'
@@ -53,8 +53,8 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 		 * @param   string $name    name of the global variable to get.
 		 * @return  array           Value of the global variable as an array or empty if not found.
 		 */
-		public static function get_global_list_var( $name, $log = true ) {
-			$var = self::get_global_var( $name, $log );
+		public static function get_global_list_var( $name ) {
+			$var = self::get_global_var( $name );
 
 			if ( is_array( $var ) ) {
 
@@ -80,8 +80,8 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 		 * @param   string $name    name of the global variable to get.
 		 * @return  int             Value of the global variable as an integer or else -1.
 		 */
-		public static function get_global_numeric_var( $name, $log = true ) {
-			$var = self::get_global_var( $name, $log );
+		public static function get_global_numeric_var( $name ) {
+			$var = self::get_global_var( $name );
 			return is_numeric( $var ) ? $var : 0;
 		}
 
@@ -93,7 +93,7 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 		 * @param   string $name    name of the global variable to get.
 		 * @return  int             Value of the global variable as a string or else an empty string.
 		 */
-		public static function get_global_string_var( $name, $log = true ) {
+		public static function get_global_string_var( $name ) {
 			$request_service = Request_Service::get_instance();
 			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 			$wpo_aad         = $request->get_item( 'wpo_aad' );
@@ -102,7 +102,7 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 				return $wpo_aad[ $name ];
 			}
 
-			$var = self::get_global_var( $name, $log );
+			$var = self::get_global_var( $name );
 			return is_string( $var ) ? WordPress_Helpers::trim( $var ) : '';
 		}
 
@@ -737,11 +737,10 @@ if ( ! class_exists( '\Wpo\Services\Options_Service' ) ) {
 		 * Gets a global variable by its name.
 		 *
 		 * @param   string $name   Variable name as string.
-		 * @param   bool   $log Whether to write to the log.
 		 *
 		 * @return  object|null The global variable or WP_Error if not found
 		 */
-		private static function get_global_var( $name, $log = true ) { // phpcs:ignore
+		private static function get_global_var( $name ) {
 			// Try return the requested option
 			if (
 				isset( $GLOBALS['WPO_CONFIG']['options'][ $name ] )

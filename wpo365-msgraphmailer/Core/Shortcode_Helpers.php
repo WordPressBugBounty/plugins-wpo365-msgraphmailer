@@ -40,35 +40,33 @@ if ( ! class_exists( '\Wpo\Core\Shortcode_Helpers' ) ) {
 								return '<div>Could not retrieve WPO365 app. [Error: not found]</div>';
 							}
 
-							$active_extensions = Extensions_Helpers::get_active_extensions();
-							$premium_with_apps = array( 'intranet', 'integrate', 'apps' );
-							$is_premium        = false;
+							$app_extension = self::find_app_extension( Extensions_Helpers::get_active_extensions() );
 
-							foreach ( $active_extensions as $slug => $data ) {
-
-								foreach ( $premium_with_apps as $lookup_term ) {
-
-									if ( stripos( $slug, $lookup_term ) !== false ) {
-
-										if ( $active_extensions[ $slug ]['version'] < 41 ) {
-											$deprecated_message = 'A deprecated version of a Microsoft 365 (Embed) App has been detected. To ensure continued compatibility with future updates, please update your premium WPO365 plugin(s) as soon as possible.';
-											Compatibility_Helpers::compat_warning(
-												sprintf(
-													'%s -> %s',
-													__METHOD__,
-													$deprecated_message
-												)
-											);
-
-											return sprintf( '<div>%s</div>', $deprecated_message );
-										}
-
-										$plugin_folder = $active_extensions[ $slug ]['plugin_folder'];
-										$is_premium    = true;
-										break 2;
-									}
-								}
+							// The cached list of active extensions can be outdated, e.g. after an update by FTP or a restored
+							// database. Check against a fresh list, once per request, before calling the plugin outdated.
+							if ( self::is_outdated_app_extension( $app_extension ) ) {
+								$app_extension = self::find_app_extension( self::refreshed_active_extensions() );
 							}
+
+							if ( self::is_outdated_app_extension( $app_extension ) ) {
+								$deprecated_message = 'A deprecated version of a Microsoft 365 (Embed) App has been detected. To ensure continued compatibility with future updates, please update your premium WPO365 plugin(s) as soon as possible.';
+								Compatibility_Helpers::compat_warning(
+									sprintf(
+										'%s -> %s',
+										__METHOD__,
+										$deprecated_message
+									)
+								);
+
+								if ( ! Permissions_Helpers::user_is_admin( wp_get_current_user() ) ) {
+									return '<div>This app can\'t be shown right now. Sign in with an administrator account to see more information.</div>';
+								}
+
+								return sprintf( '<div>%s</div>', $deprecated_message );
+							}
+
+							$is_premium    = $app_extension !== null;
+							$plugin_folder = $is_premium ? $app_extension['plugin_folder'] : '';
 
 							if ( empty( $plugin_folder ) ) {
 								$plugin_folder = 'wpo365-login';
@@ -706,6 +704,68 @@ if ( ! class_exists( '\Wpo\Core\Shortcode_Helpers' ) ) {
 					unset( $wp_filter['plugins_url'] );
 				}
 			}
+		}
+
+		/**
+		 * The first active premium extension that provides the Microsoft 365 apps, or null.
+		 *
+		 * @since   45.1
+		 *
+		 * @param   array $active_extensions As returned by Extensions_Helpers::get_active_extensions().
+		 * @return  array|null
+		 */
+		private static function find_app_extension( $active_extensions ) {
+
+			if ( ! is_array( $active_extensions ) ) {
+				return null;
+			}
+
+			foreach ( $active_extensions as $slug => $data ) {
+
+				foreach ( array( 'intranet', 'integrate', 'apps' ) as $lookup_term ) {
+
+					if ( stripos( $slug, $lookup_term ) !== false ) {
+						return is_array( $data ) ? $data : null;
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/**
+		 * Whether a premium extension's apps predate version 41. An unknown version counts as current.
+		 *
+		 * @since   45.1
+		 *
+		 * @param   array|null $app_extension
+		 * @return  bool
+		 */
+		private static function is_outdated_app_extension( $app_extension ) {
+
+			if ( empty( $app_extension['version'] ) ) {
+				return false;
+			}
+
+			return version_compare( (string) $app_extension['version'], '41', '<' );
+		}
+
+		/**
+		 * The active extensions rebuilt from the installed plugins, at most once per request, also when a page holds
+		 * several apps.
+		 *
+		 * @since   45.1
+		 *
+		 * @return  array
+		 */
+		private static function refreshed_active_extensions() {
+			static $refreshed = null;
+
+			if ( $refreshed === null ) {
+				$refreshed = Extensions_Helpers::get_active_extensions( true );
+			}
+
+			return $refreshed;
 		}
 	}
 }

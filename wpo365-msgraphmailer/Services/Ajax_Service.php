@@ -305,6 +305,9 @@ if ( ! class_exists( '\Wpo\Services\Ajax_Service' ) ) {
 
 			Wpmu_Helpers::mu_delete_transient( 'wpo365_errors' );
 
+			// Re-armed only by the next rewritten request that reaches the Media Folder proxy while the feature is off.
+			delete_site_transient( 'wpo365_media_proxy_off' );
+
 			self::ajax_response( 'OK', '', '', null );
 		}
 
@@ -834,6 +837,12 @@ if ( ! class_exists( '\Wpo\Services\Ajax_Service' ) ) {
 			$wpmu_mode     = Options_Service::mu_use_subsite_options() ? 'wpmuShared' : 'wpmuDedicated';
 			$update_result = update_site_option( 'wpo365_wpmu_mode', $wpmu_mode );
 			$ok            = $update_result ? 'OK' : 'NOK';
+
+			// Another option now governs each site's "Require login for the Media Folder" and signing key, so the cache
+			// files must go. Without them the next requests load WordPress, which applies the new mode.
+			if ( $update_result ) {
+				\Wpo\Core\Secure_Download_Handler::delete_cache_files();
+			}
 
 			self::ajax_response( $ok, '', '', null );
 		}

@@ -3,7 +3,7 @@
  *  Plugin Name: WPO365 | MICROSOFT 365 GRAPH MAILER
  *  Plugin URI: https://wordpress.org/plugins/wpo365-msgraphmailer
  *  Description: WPO365 | MS GRAPH MAILER re-configures your WordPress website to send transactional emails from one of your Microsoft 365 Exchange Online / Mail enabled accounts using Microsoft Graph instead of - for example - using SMTP.
- *  Version: 6.2
+ *  Version: 6.3
  *  Author: marco@wpo365.com
  *  Author URI: https://www.wpo365.com
  *  License: GPL2+
@@ -139,6 +139,9 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 				// Add license related messages to WP Admin
 				\Wpo\Core\Plugin_Helpers::show_license_notices();
 
+				// Warn about configuration options that make the website vulnerable.
+				Compatibility_Helpers::check_skip_nonce_verification();
+
 				// Ensure WP Cron job to check for each registered application whether its secret will epxire soon is added.
 
 				if ( class_exists( '\Wpo\Services\Password_Credentials_Service' ) ) {
@@ -193,7 +196,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			add_action( 'phpmailer_init', '\Wpo\Mail\Mailer::init', PHP_INT_MAX );
 			add_filter( 'wp_mail_from', '\Wpo\Mail\Mailer::mail_from', 10, 1 );
 
-			if ( Options_Service::get_global_boolean_var( 'mail_log', false ) && method_exists( '\Wpo\Mail\Mail_Db', 'add_mail_log' ) ) {
+			if ( Options_Service::get_global_boolean_var( 'mail_log' ) && method_exists( '\Wpo\Mail\Mail_Db', 'add_mail_log' ) ) {
 				// Log each wp_mail in the wpo365_table
 				add_filter( 'wp_mail', '\Wpo\Mail\Mail_Db::add_mail_log', 10, 1 );
 			}
@@ -216,7 +219,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			add_filter( 'safe_style_css', '\Wpo\Core\WordPress_Helpers::safe_css', 10, 1 );
 
 			// Admin menu bar notifications
-			if ( Options_Service::get_global_boolean_var( 'mail_staging_mode', false ) && class_exists( '\Wpo\Mail\Mail_Notifications' ) ) {
+			if ( Options_Service::get_global_boolean_var( 'mail_staging_mode' ) && class_exists( '\Wpo\Mail\Mail_Notifications' ) ) {
 				add_action( 'admin_bar_menu', '\Wpo\Mail\Mail_Notifications::staging_mode_active', 100 );
 				add_action( 'wp_enqueue_scripts', '\Wpo\Core\Script_Helpers::add_admin_bar_styles' );
 				add_action( 'admin_enqueue_scripts', '\Wpo\Core\Script_Helpers::add_admin_bar_styles' );
@@ -230,7 +233,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			add_action( 'upgrader_process_complete', '\Wpo\Core\Extensions_Helpers::plugin_updated', 10, 2 );
 
 			// To collect Insights
-			if ( Options_Service::get_global_boolean_var( 'insights_enabled', false ) ) {
+			if ( Options_Service::get_global_boolean_var( 'insights_enabled' ) ) {
 				add_action( 'wpo365/mail/sent', '\Wpo\Insights\Event_Service::mail_sent__handler', 10, 1 );
 				add_action( 'wpo365/mail/sent/fail', '\Wpo\Insights\Event_Service::mail_sent_fail__handler', 10, 2 );
 				add_action( 'wpo365/alert/submitted', '\Wpo\Insights\Event_Service::notification_sent__handler', 10, 3 );
@@ -257,7 +260,7 @@ if ( ! class_exists( '\Wpo\MsGraphMailer' ) ) {
 			$request_service          = Request_Service::get_instance();
 			$request                  = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 			$request_log              = $request->get_item( 'request_log' );
-			$request_log['debug_log'] = Options_Service::get_global_boolean_var( 'debug_log', false );
+			$request_log['debug_log'] = Options_Service::get_global_boolean_var( 'debug_log' );
 			$request->set_item( 'request_log', $request_log );
 		}
 

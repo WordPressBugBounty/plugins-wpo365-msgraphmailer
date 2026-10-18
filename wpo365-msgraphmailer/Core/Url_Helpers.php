@@ -947,7 +947,7 @@ if ( ! class_exists( '\Wpo\Core\Url_Helpers' ) ) {
 		 * @return void
 		 */
 		public static function disable_alpn_for_microsoft_hosts( $handle, $parsed_args, $url ) { // phpcs:ignore
-			if ( ! Options_Service::get_global_boolean_var( 'disable_alpn', false ) ) {
+			if ( ! Options_Service::get_global_boolean_var( 'disable_alpn' ) ) {
 				return;
 			}
 
@@ -999,7 +999,7 @@ if ( ! class_exists( '\Wpo\Core\Url_Helpers' ) ) {
 
 			if ( wp_remote_retrieve_response_code( $response ) !== 404
 				|| WordPress_Helpers::trim( wp_remote_retrieve_body( $response ) ) !== 'Not Found.'
-				|| Options_Service::get_global_boolean_var( 'disable_alpn', false ) ) {
+				|| Options_Service::get_global_boolean_var( 'disable_alpn' ) ) {
 				return $response;
 			}
 

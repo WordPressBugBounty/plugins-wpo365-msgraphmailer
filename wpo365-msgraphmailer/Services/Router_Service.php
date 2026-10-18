@@ -2,6 +2,7 @@
 
 namespace Wpo\Services;
 
+use Wpo\Core\Compatibility_Helpers;
 use Wpo\Core\Url_Helpers;
 use Wpo\Core\Version;
 use Wpo\Core\WordPress_Helpers;
@@ -11,6 +12,7 @@ use Wpo\Services\Id_Token_Service;
 use Wpo\Services\Log_Service;
 use Wpo\Services\Options_Service;
 use Wpo\Services\Request_Service;
+use Wpo\Services\Teams_Token_Service;
 
 use Wpo\Tests\Self_Test;
 
@@ -23,12 +25,6 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 
 
 		public static function has_route() {
-
-			// If we detect interim-login then redirect to homepage to force WordPress fallback to "Session expired" UI.
-			if ( isset( $_REQUEST['interim-login'] ) && (string) $_REQUEST['interim-login'] === '1' ) { // phpcs:ignore
-				wp_safe_redirect( home_url() );
-				exit;
-			}
 
 			// initiate openidconnect / saml flow
 			if ( ! empty( $_REQUEST['action'] ) && $_REQUEST['action'] === 'openidredirect' ) { // phpcs:ignore
@@ -92,6 +88,28 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 				}
 
 				if ( ! empty( $_REQUEST['id_token'] ) ) { // phpcs:ignore
+					$id_token = sanitize_text_field( wp_unslash( $_REQUEST['id_token'] ) ); //phpcs:ignore
+
+					/**
+					 * @since 45.1  The client-side redirect posts the token it gets from Microsoft Teams (silent authentication)
+					 *              as id_token. That token cannot carry a WPO365 nonce and therefore has its own route, whatever
+					 *              the OpenID Connect flow.
+					 */
+					if ( self::is_posted_teams_token( $request ) ) {
+						$request->set_item( 'encoded_id_token', $id_token );
+						unset( $_REQUEST['id_token'] );
+						add_action( 'init', '\Wpo\Services\Router_Service::route_teams_token' );
+						return true;
+					}
+
+					/**
+					 * @since 45.1  Mail authorization asks Microsoft for a code only (response_type=code). A posted ID token with
+					 *              mode=mailAuthorize was therefore not requested by WPO365 and must never sign in a user.
+					 */
+					if ( $mode === 'mailAuthorize' ) {
+						Log_Service::write_log( 'WARN', sprintf( '%s -> Ignoring an ID token that was posted to this website, because mail authorization never receives one', __METHOD__ ) );
+						return false;
+					}
 
 					/**
 					 * @since 45.0  With the authorization code flow WPO365 asks Microsoft for a code only (response_type=code)
@@ -102,8 +120,6 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 						Log_Service::write_log( 'WARN', sprintf( '%s -> Ignoring an ID token that was posted to this website, because WPO365 is configured for the authorization code flow', __METHOD__ ) );
 						return false;
 					}
-
-					$id_token = sanitize_text_field( wp_unslash( $_REQUEST['id_token'] ) ); //phpcs:ignore
 
 					if ( Id_Token_Service::check_audience( $id_token ) === true ) {
 						$request->set_item( 'encoded_id_token', $id_token );
@@ -296,6 +312,29 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 			Id_Token_Service::process_openidconnect_token();
 
 			$wpo_usr = Authentication_Service::authenticate_oidc_user();
+			Url_Helpers::goto_after( $wpo_usr );
+		}
+
+		/**
+		 * Route to process a token that the client-side redirect obtained from Microsoft Teams (silent authentication).
+		 *
+		 * @since 45.1
+		 *
+		 * @return void
+		 */
+		public static function route_teams_token() {
+			Log_Service::write_log( 'DEBUG', '##### -> ' . __METHOD__ );
+
+			Compatibility_Helpers::check_teams_loggedout_page();
+			Id_Token_Service::process_teams_token();
+
+			$wpo_usr = Authentication_Service::authenticate_oidc_user();
+
+			// So that the same token can be used again once the user signs out (see Teams_Token_Service::clear_token()).
+			$request_service = Request_Service::get_instance();
+			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
+			Teams_Token_Service::assign_user( $request->get_item( 'teams_token_fingerprint' ), get_current_user_id() );
+
 			Url_Helpers::goto_after( $wpo_usr );
 		}
 
@@ -685,8 +724,8 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 
 			// Skip if there is no authentication response to process or the admin has disabled SSO and the Graph Mailer or the Graph Mailer is enabled but the reponse is for mail-authorization
 			$no_auth_response = ! $is_oidc_response && ! $is_saml_response;
-			$no_sso           = Options_Service::get_global_boolean_var( 'no_sso', false );
-			$use_mailer       = Options_Service::get_global_boolean_var( 'use_graph_mailer', false );
+			$no_sso           = Options_Service::get_global_boolean_var( 'no_sso' );
+			$use_mailer       = Options_Service::get_global_boolean_var( 'use_graph_mailer' );
 
 			if ( $no_auth_response || ( $no_sso && ! $use_mailer ) || ( $no_sso && $use_mailer && $request->get_item( 'mode' ) !== 'mailAuthorize' ) ) {
 				return true; // Nothing to do
@@ -694,6 +733,15 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 
 			// Don't skip if strict-mode has not been enabled
 			if ( ! Options_Service::get_aad_option( 'redirect_url_strict', true ) ) {
+				return false;
+			}
+
+			/**
+			 * @since 45.1  The client-side redirect posts the token from Microsoft Teams to the page open in the Teams tab,
+			 *              not to the Redirect URI. A token that Teams obtained for this website cannot be meant for another
+			 *              plugin, so strict mode does not apply. Id_Token_Service::process_teams_token() verifies it.
+			 */
+			if ( $is_oidc_response && self::is_posted_teams_token( $request ) ) {
 				return false;
 			}
 
@@ -871,6 +919,31 @@ if ( ! class_exists( '\Wpo\Services\Router_Service' ) ) {
 			$can_custom_log && Log_Service::write_to_custom_log( $error, 'sync' );
 			Log_Service::write_log( 'ERROR', $error );
 			exit( wp_kses( $error, WordPress_Helpers::get_allowed_html() ) );
+		}
+
+		/**
+		 * Whether the client-side redirect posted a token that it obtained from Microsoft Teams (silent authentication).
+		 * Not for a self-test or a mail authorization, which never involve Teams.
+		 *
+		 * @since 45.1
+		 *
+		 * @param \Wpo\Core\Request $request
+		 *
+		 * @return bool
+		 */
+		private static function is_posted_teams_token( $request ) {
+
+			if ( empty( $_REQUEST['id_token'] ) ) { // phpcs:ignore
+				return false;
+			}
+
+			$mode = $request->get_item( 'mode' );
+
+			if ( $mode === 'selfTest' || $mode === 'mailAuthorize' ) {
+				return false;
+			}
+
+			return Id_Token_Service::is_teams_token( sanitize_text_field( wp_unslash( $_REQUEST['id_token'] ) ) ); // phpcs:ignore
 		}
 	}
 }

@@ -731,6 +731,24 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 		}
 
 		/**
+		 * Whether goodbye() sends the user to WordPress' own login page (wp-login.php), which WordPress does not allow
+		 * to be shown in a frame - e.g. inside Microsoft Teams.
+		 *
+		 * @since 45.1
+		 *
+		 * @return bool
+		 */
+		public static function goodbye_lands_on_default_login_page() {
+			list( $redirect_to ) = self::get_loggedout_redirect_to( Error_Service::CHECK_LOG );
+			$default_login_url   = Url_Helpers::get_login_urls()['default_login_url'];
+
+			return strcasecmp(
+				untrailingslashit( (string) wp_parse_url( $redirect_to, PHP_URL_PATH ) ),
+				untrailingslashit( (string) wp_parse_url( $default_login_url, PHP_URL_PATH ) )
+			) === 0;
+		}
+
+		/**
 		 * Shared by goodbye() and is_deactivated() - both compute the safe landing URL for a
 		 * failed sign-in or a deactivated account identically: the built-in /wpo/loggedout page
 		 * when Login_Url_Service::should_use_builtin_loggedout_page() says so, the admin's
@@ -830,9 +848,18 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 			 * @since   45.0    A request for a Media Folder item (see Secure_Download_Proxy.php) may be allowed by the
 			 *                  wpo365/media/skip_authentication filter. The outcome is stored as 1 / 0, so that
 			 *                  Secure_Download_Service can reuse it instead of evaluating the filter again.
+			 * @since   45.1    Always skipped when the site that owns the item has "Require login for the Media
+			 *                  Folder" off. Its items are public then, as the web server would serve them. On a multisite
+			 *                  network in dedicated mode the one rewrite rule also routes such sites' items here.
 			 */
 
 			if ( defined( 'WPO365_SECURE_DOWNLOAD' ) && constant( 'WPO365_SECURE_DOWNLOAD' ) === true ) {
+
+				if ( ! Options_Service::get_global_boolean_var( 'block_direct_media_access' ) ) {
+					Log_Service::write_log( 'DEBUG', sprintf( '%s -> Skipping authentication because "Require login for the Media Folder" is off for this site', __METHOD__ ) );
+					return true;
+				}
+
 				$request_service           = Request_Service::get_instance();
 				$request                   = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 				$media_skip_authentication = apply_filters( 'wpo365/media/skip_authentication', false ) === true;
@@ -1184,7 +1211,7 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 		 */
 		public static function check_private_pages() {
 
-			if ( ! Options_Service::get_global_boolean_var( 'redirect_on_private_page', false ) ) {
+			if ( ! Options_Service::get_global_boolean_var( 'redirect_on_private_page' ) ) {
 				return;
 			}
 

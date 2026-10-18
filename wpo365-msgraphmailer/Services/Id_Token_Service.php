@@ -11,6 +11,7 @@ use Wpo\Services\Log_Service;
 use Wpo\Services\Nonce_Service;
 use Wpo\Services\Options_Service;
 use Wpo\Services\Request_Service;
+use Wpo\Services\Teams_Token_Service;
 
 // Prevent public access to this script
 defined( 'ABSPATH' ) || die();
@@ -19,6 +20,16 @@ if ( ! class_exists( '\Wpo\Services\Id_Token_Service' ) ) {
 
 	class Id_Token_Service {
 
+		/**
+		 * Client IDs of Microsoft Teams (desktop and mobile, web). Only tokens that Teams obtained on behalf of the
+		 * user are accepted for silent authentication inside a Teams tab.
+		 *
+		 * @since 45.1
+		 */
+		const TEAMS_CLIENT_IDS = array(
+			'1fec8e78-bce4-4aaf-ab1b-5451cc387264',
+			'5e3ce6c0-2b1f-4285-8d4b-75ee78787346',
+		);
 
 		/**
 		 * Constructs the oauth authorize URL that is the end point where the user will be sent for authorization.
@@ -210,7 +221,7 @@ if ( ! class_exists( '\Wpo\Services\Id_Token_Service' ) ) {
 			}
 
 			// Verify the nonce; verify_nonce() calls Authentication_Service::goodbye() and exits on failure.
-			Nonce_Service::verify_nonce( $id_token->nonce );
+			Nonce_Service::verify_nonce( isset( $id_token->nonce ) ? $id_token->nonce : '' );
 
 			// Log id token if configured
 			if ( Options_Service::get_global_boolean_var( 'debug_log_id_token' ) === true ) {
@@ -226,6 +237,80 @@ if ( ! class_exists( '\Wpo\Services\Id_Token_Service' ) ) {
 			} elseif ( property_exists( $id_token, 'acr' ) ) {
 				$request->set_item( 'tfp', $id_token->acr );
 			}
+		}
+
+		/**
+		 * Whether a posted token was obtained by Microsoft Teams (silent authentication inside a Teams tab). Only the
+		 * unverified payload is inspected; process_teams_token() verifies the token.
+		 *
+		 * @since 45.1
+		 *
+		 * @param string $token
+		 *
+		 * @return bool
+		 */
+		public static function is_teams_token( $token ) {
+
+			if (
+				! Options_Service::get_global_boolean_var( 'use_teams' ) ||
+				Options_Service::get_global_boolean_var( 'use_b2c' ) ||
+				Options_Service::get_global_boolean_var( 'use_ciam' )
+			) {
+				return false;
+			}
+
+			$token_arr = explode( '.', $token );
+
+			if ( count( $token_arr ) !== 3 ) {
+				return false;
+			}
+
+			$claims = \json_decode( WordPress_Helpers::base64_url_decode( $token_arr[1] ) );
+
+			if ( ! is_object( $claims ) ) {
+				return false;
+			}
+
+			return in_array( self::get_client_id( $claims ), self::TEAMS_CLIENT_IDS, true );
+		}
+
+		/**
+		 * Verifies a token that Microsoft Teams obtained for the user and caches its claims as the ID token for the
+		 * current request. Such a token cannot carry a WPO365 nonce, so it is accepted only once instead (see
+		 * Teams_Token_Service). Calls Authentication_Service::goodbye() and exits on failure.
+		 *
+		 * @since 45.1
+		 *
+		 * @return void
+		 */
+		public static function process_teams_token() {
+			Log_Service::write_log( 'DEBUG', '##### -> ' . __METHOD__ );
+
+			$request_service = Request_Service::get_instance();
+			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
+			$claims          = self::decode_id_token();
+
+			if ( $claims === false ) {
+				Log_Service::write_log( 'ERROR', __METHOD__ . ' -> Microsoft Teams token could not be processed and user will be redirected to default WordPress login.' );
+				Authentication_Service::goodbye( Error_Service::ID_TOKEN_ERROR );
+			}
+
+			$validation = self::validate_teams_token( $claims );
+
+			if ( $validation !== true ) {
+				Log_Service::write_log( 'ERROR', sprintf( '%s -> %s', __METHOD__, $validation ) );
+				Authentication_Service::goodbye( Error_Service::ID_TOKEN_AUD );
+			}
+
+			// Calls Authentication_Service::goodbye() and exits when the token has been used before.
+			$fingerprint = Teams_Token_Service::memoize_token( $request->get_item( 'encoded_id_token' ), $claims->exp );
+			$request->set_item( 'teams_token_fingerprint', $fingerprint );
+
+			if ( Options_Service::get_global_boolean_var( 'debug_log_id_token' ) === true ) {
+				Log_Service::write_log( 'DEBUG', $claims );
+			}
+
+			$request->set_item( 'id_token', $claims );
 		}
 
 		/**
@@ -587,6 +672,133 @@ if ( ! class_exists( '\Wpo\Services\Id_Token_Service' ) ) {
 			}
 
 			return true;
+		}
+
+		/**
+		 * Whether a token that Microsoft Teams obtained for the user is meant for this website: issued to Teams, for this
+		 * website's application, by its own or an allowed tenant. Teams may return a v1 token, whose audience is the
+		 * App ID URI (api://<domain>/<application id>) and whose issuer is https://sts.windows.net/<tenant id>/.
+		 *
+		 * @since   45.1
+		 *
+		 * @param   object $claims
+		 *
+		 * @return  true|string True, or a message that explains why the token is refused.
+		 */
+		private static function validate_teams_token( $claims ) {
+			// Escaped because the messages are rendered for an administrator as a WPO365 health message.
+			$user_name = ! empty( $claims->upn ) && is_string( $claims->upn )
+				? esc_html( $claims->upn )
+				: ( ! empty( $claims->preferred_username ) && is_string( $claims->preferred_username )
+					? esc_html( $claims->preferred_username )
+					: '???'
+				);
+
+			if ( ! in_array( self::get_client_id( $claims ), self::TEAMS_CLIENT_IDS, true ) ) {
+				return sprintf( 'The Microsoft Teams token that has been received for [%s] has not been issued to Microsoft Teams.', $user_name );
+			}
+
+			if ( empty( $claims->exp ) || ! is_numeric( $claims->exp ) ) {
+				return sprintf( 'The Microsoft Teams token that has been received for [%s] has no expiry time.', $user_name );
+			}
+
+			$application_id = strtolower( WordPress_Helpers::trim( Options_Service::get_aad_option( 'application_id' ) ) );
+			$audiences      = isset( $claims->aud ) ? array_map( 'strtolower', array_filter( (array) $claims->aud, 'is_string' ) ) : array();
+			$app_id_uri_end = '/' . $application_id;
+			$audience_ok    = false;
+
+			foreach ( $audiences as $audience ) {
+
+				if (
+					$audience === $application_id ||
+					( strpos( $audience, 'api://' ) === 0 && substr( $audience, -strlen( $app_id_uri_end ) ) === $app_id_uri_end )
+				) {
+					$audience_ok = true;
+				}
+			}
+
+			if ( empty( $application_id ) || ! $audience_ok ) {
+				return sprintf(
+					'The Microsoft Teams token that has been received for [%s] is intended for another audience [%s] (vs. your registered application [%s]).',
+					$user_name,
+					esc_html( implode( ', ', $audiences ) ),
+					esc_html( $application_id )
+				);
+			}
+
+			$tenant_id      = ! empty( $claims->tid ) && is_string( $claims->tid ) ? strtolower( $claims->tid ) : '';
+			$multi_tenanted = Options_Service::get_global_boolean_var( 'multi_tenanted' );
+
+			if ( $multi_tenanted ) {
+				$allowed_tenants = array();
+
+				foreach ( Options_Service::get_global_list_var( 'allowed_tenants' ) as $allowed_tenant ) {
+
+					if ( is_string( $allowed_tenant ) && WordPress_Helpers::trim( $allowed_tenant ) !== '' ) {
+						$allowed_tenants[] = strtolower( WordPress_Helpers::trim( $allowed_tenant ) );
+					}
+				}
+
+				// An empty list allows users from any tenant.
+				$tenant_ok = empty( $allowed_tenants ) || in_array( $tenant_id, array_merge( $allowed_tenants, array( self::get_own_tenant_guid() ) ), true );
+			} else {
+				$own_tenant_id = self::get_own_tenant_guid();
+				$tenant_ok     = $own_tenant_id !== '' && $tenant_id === $own_tenant_id;
+			}
+
+			if ( $tenant_id === '' || ! $tenant_ok ) {
+				return sprintf(
+					'The Microsoft Teams token that has been received for [%s] has been issued by a tenant [%s] that is not allowed to sign in to this website.',
+					$user_name,
+					esc_html( $tenant_id )
+				);
+			}
+
+			$open_id_config = Jwt_Token_Service::get_openid_configuration( null, $multi_tenanted );
+
+			if ( empty( $open_id_config->issuer ) || ! is_string( $open_id_config->issuer ) ) {
+				return sprintf(
+					'The issuer of the Microsoft Teams token that has been received for [%s] cannot be verified, because the Open ID configuration of the identity provider could not be retrieved. Please check the log for details.',
+					$user_name
+				);
+			}
+
+			// Entra ID's multi-tenant configuration publishes the issuer as a template: https://login.microsoftonline.com/{tenantid}/v2.0.
+			$expected_issuers = array(
+				str_ireplace( '{tenantid}', $tenant_id, $open_id_config->issuer ),
+				sprintf( 'https://sts.windows.net/%s/', $tenant_id ),
+			);
+
+			$issuer = ! empty( $claims->iss ) && is_string( $claims->iss ) ? $claims->iss : '';
+
+			foreach ( $expected_issuers as $expected_issuer ) {
+
+				if ( strcasecmp( $issuer, $expected_issuer ) === 0 ) {
+					return true;
+				}
+			}
+
+			return sprintf(
+				'The Microsoft Teams token that has been received for [%s] has been issued by [%s] (vs. the expected issuer [%s]).',
+				$user_name,
+				esc_html( $issuer ),
+				esc_html( implode( ' or ', $expected_issuers ) )
+			);
+		}
+
+		/**
+		 * The client that a token has been issued to: azp (v2 tokens) or appid (v1 tokens), in lower case.
+		 *
+		 * @since   45.1
+		 *
+		 * @param   object $claims
+		 *
+		 * @return  string The client ID, or an empty string.
+		 */
+		private static function get_client_id( $claims ) {
+			$client_id = ! empty( $claims->azp ) ? $claims->azp : ( ! empty( $claims->appid ) ? $claims->appid : '' );
+
+			return is_string( $client_id ) ? strtolower( $client_id ) : '';
 		}
 
 		/**

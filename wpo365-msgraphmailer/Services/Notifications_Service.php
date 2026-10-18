@@ -123,7 +123,7 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 						// Getting started
 						if ( empty( Options_Service::is_wpo365_configured() ) ) { // Getting started
 
-							if ( empty( Options_Service::get_global_boolean_var( 'no_sso', false ) ) ) {
+							if ( empty( Options_Service::get_global_boolean_var( 'no_sso' ) ) ) {
 								$title   = __( 'Getting started', 'wpo365-login' );
 								$message = sprintf(
 									/* translators: 1: Clickable link - do not translate 2: WPO365.com website name - do not translate 3: List with options - Do not translate */
@@ -149,7 +149,7 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 								$content = ob_get_clean();
 								echo '' . wp_kses( $content, WordPress_Helpers::get_allowed_html() );
 							}
-						} elseif ( empty( Options_Service::get_global_boolean_var( 'review_stop', false ) ) && empty( Wpmu_Helpers::mu_get_transient( 'wpo365_review_dismissed' ) ) && empty( Extensions_Helpers::get_active_extensions() ) ) {
+						} elseif ( empty( Options_Service::get_global_boolean_var( 'review_stop' ) ) && empty( Wpmu_Helpers::mu_get_transient( 'wpo365_review_dismissed' ) ) && empty( Extensions_Helpers::get_active_extensions() ) ) {
 							$title   = __( 'Sharing is caring', 'wpo365-login' );
 							$buttons = sprintf(
 								'<a class="button button-primary" href="https://wordpress.org/support/view/plugin-reviews/wpo365-login?filter=5#postform" target="_blank">%s</a> <a class="button" href="./?wpo365_review_dismissed">%s</a> <a class="button" href="./?wpo365_review_stop">%s</a></p>',
@@ -176,7 +176,7 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 
 					if ( $GLOBALS['WPO_CONFIG']['plugin'] === 'wpo365-msgraphmailer/wpo365-msgraphmailer.php' ) {
 
-						if ( empty( Options_Service::get_global_boolean_var( 'review_stop', false ) ) && empty( Wpmu_Helpers::mu_get_transient( 'wpo365_review_dismissed' ) ) && empty( Extensions_Helpers::get_active_extensions() ) ) {
+						if ( empty( Options_Service::get_global_boolean_var( 'review_stop' ) ) && empty( Wpmu_Helpers::mu_get_transient( 'wpo365_review_dismissed' ) ) && empty( Extensions_Helpers::get_active_extensions() ) ) {
 							$title   = __( 'Sharing is caring', 'wpo365-login' );
 							$buttons = sprintf(
 								'<a class="button button-primary" href="https://wordpress.org/support/plugin/wpo365-msgraphmailer/reviews/?filter=5#postform" target="_blank">%s</a> <a class="button" href="./?wpo365_review_dismissed">%s</a> <a class="button" href="./?wpo365_review_stop">%s</a></p>',

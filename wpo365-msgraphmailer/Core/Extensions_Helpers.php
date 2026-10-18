@@ -60,7 +60,13 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 							return true;
 						}
 
-						$sites = get_sites( array( 'fields' => 'ids' ) );
+						// Without 'number', get_sites() returns only the first 100 sites.
+						$sites = get_sites(
+							array(
+								'number' => 0,
+								'fields' => 'ids',
+							)
+						);
 
 						foreach ( $sites as $site_id ) {
 							switch_to_blog( $site_id );
@@ -98,6 +104,7 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 
 				if ( is_multisite() ) {
 					delete_site_option( 'wpo365_active_extensions' );
+					self::delete_every_site_cache();
 				}
 
 				delete_option( 'wpo365_active_extensions' );
@@ -110,9 +117,15 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 		 *
 		 * @return void
 		 */
-		public static function plugin_activated( $plugin, $network_wide ) { // phpcs:ignore
+		public static function plugin_activated( $plugin, $network_wide ) {
 
 			if ( is_multisite() ) {
+
+				// Network-wide, every site's own list changes, not just the current site's.
+				if ( $network_wide ) {
+					self::delete_every_site_cache();
+				}
+
 				self::get_active_extensions( true, 'network', $plugin );
 			}
 
@@ -127,9 +140,15 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 		 *
 		 * @return void
 		 */
-		public static function plugin_deactivated( $plugin, $network_wide ) { // phpcs:ignore
+		public static function plugin_deactivated( $plugin, $network_wide ) {
 
 			if ( is_multisite() ) {
+
+				// Network-wide, every site's own list changes, not just the current site's.
+				if ( $network_wide ) {
+					self::delete_every_site_cache();
+				}
+
 				self::get_active_extensions( true, 'network', $plugin, true );
 			}
 
@@ -574,6 +593,27 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 			}
 
 			return \trailingslashit( dirname( dirname( __DIR__ ) ) ) . 'wpo365-login';
+		}
+
+		/**
+		 * Deletes every site's cached list of active extensions, so that each site rebuilds its own on its next request.
+		 * A network-wide (de)activation or an update only refreshes the network's list and the current site's.
+		 *
+		 * @since   45.1
+		 *
+		 * @return  void
+		 */
+		private static function delete_every_site_cache() {
+			$site_ids = get_sites(
+				array(
+					'number' => 0,
+					'fields' => 'ids',
+				)
+			);
+
+			foreach ( $site_ids as $site_id ) {
+				delete_blog_option( $site_id, 'wpo365_active_extensions' );
+			}
 		}
 	}
 }

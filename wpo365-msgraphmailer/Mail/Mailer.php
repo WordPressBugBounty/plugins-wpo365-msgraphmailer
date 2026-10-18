@@ -71,8 +71,8 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 					$message = sprintf(
 						'%s -> Authorization to sent emails using Microsoft Graph is missing and therefore email with subject "%s" for recipient(s) "%s" was not sent using the WPO365 Graph Mailer. Please complete the authorization or disable the WPO365 Graph Mailer.',
 						__METHOD__,
-							$phpmailer->Subject, // phpcs:ignore
-							print_r( $phpmailer->getToAddresses(), true ) // phpcs:ignore
+							esc_html( $phpmailer->Subject ), // phpcs:ignore
+							esc_html( print_r( $phpmailer->getToAddresses(), true ) ) // phpcs:ignore
 					);
 					Log_Service::write_log( 'ERROR', $message );
 					do_action( 'wpo365/mail/sent/fail', $message );
@@ -108,8 +108,8 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 
 				$mail_error = sprintf(
 					'Cannot sent email with subject "%s" when no valid recipient has been specified [%s]',
-					$this->phpmailer_data->Subject,
-					print_r( $this->phpmailer_data->getToAddresses(), true ) // phpcs:ignore
+					esc_html( $this->phpmailer_data->Subject ),
+					esc_html( print_r( $this->phpmailer_data->getToAddresses(), true ) ) // phpcs:ignore
 				);
 
 				self::update_mail_log( $mail_error, false, 'ERROR', true );
@@ -361,8 +361,8 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 			if ( empty( $skip_duplicate_check ) && self::is_duplicate_message( $message_as_json ) ) {
 				$log_message = sprintf(
 					'Email with subject [%s] to [%s] was not sent because an identical message was detected within the last 60 seconds (duplicate suppressed)',
-					$this->phpmailer_data->Subject, // phpcs:ignore
-					self::implode_to( $to )
+					esc_html( $this->phpmailer_data->Subject ), // phpcs:ignore
+					esc_html( self::implode_to( $to ) )
 				);
 				Log_Service::write_log( 'WARN', sprintf( '%s -> %s', __METHOD__, $log_message ) );
 				self::update_mail_log( $log_message, false, 'WARN', false );
@@ -472,7 +472,7 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 				}
 			}
 
-			$log_message = sprintf( 'WordPress email with subject [%s] sent successfully to [%s] using Microsoft Graph', $this->phpmailer_data->Subject, self::implode_to( $to ) );
+			$log_message = sprintf( 'WordPress email with subject [%s] sent successfully to [%s] using Microsoft Graph', esc_html( $this->phpmailer_data->Subject ), esc_html( self::implode_to( $to ) ) );
 			self::update_mail_log( $log_message, true, 'DEBUG', true );
 
 			return true;

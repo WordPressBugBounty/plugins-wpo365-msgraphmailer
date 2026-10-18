@@ -3,7 +3,7 @@
         'name' => 'wpo365/wpo365-msgraphmailer',
         'pretty_version' => 'dev-develop',
         'version' => 'dev-develop',
-        'reference' => 'd9492a782575c01699e097116cd0a1825ef0d4e0',
+        'reference' => '139b10225e203130d70c9712ea00fb0fdbefbca7',
         'type' => 'plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -40,7 +40,7 @@
         'wpo365/wpo365-msgraphmailer' => array(
             'pretty_version' => 'dev-develop',
             'version' => 'dev-develop',
-            'reference' => 'd9492a782575c01699e097116cd0a1825ef0d4e0',
+            'reference' => '139b10225e203130d70c9712ea00fb0fdbefbca7',
             'type' => 'plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

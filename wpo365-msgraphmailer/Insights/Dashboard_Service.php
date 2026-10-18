@@ -58,7 +58,7 @@ if ( ! class_exists( '\Wpo\Insights\Dashboard_Service' ) ) {
 		 * @return void
 		 */
 		public static function insights_widget_display() {
-			$insights_enabled = Options_Service::get_global_boolean_var( 'insights_enabled', false );
+			$insights_enabled = Options_Service::get_global_boolean_var( 'insights_enabled' );
 
 			echo '<div style="display: grid; grid-template-columns: 1fr 4fr; grid-auto-rows: minmax(64px, auto); column-gap: 16px; align-items: center;">';
 			echo '<div style="margin-bottom: 0; text-align: center;"><img src="https://www.wpo365.com/wp-content/uploads/2023/05/website-icon-512.png" style="width: 50px; height: auto;"></div>';

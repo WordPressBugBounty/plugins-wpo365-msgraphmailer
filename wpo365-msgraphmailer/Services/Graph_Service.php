@@ -84,6 +84,10 @@ if ( ! class_exists( '\Wpo\Services\Graph_Service' ) ) {
 			$uses_me                   = WordPress_Helpers::stripos( $query, '/me/' ) !== false;
 			$user_has_delegated_access = Access_Token_Service::user_has_delegated_access( get_current_user_id() );
 
+			// The endpoint must be in the same (national) cloud as the access token e.g. graph.microsoft.us for GCC High.
+			$tld = $use_mail_config ? Options_Service::get_mail_option( 'mail_tld' ) : Options_Service::get_aad_option( 'tld' );
+			$tld = ! empty( $tld ) ? $tld : '.com';
+
 			if ( ! $user_has_delegated_access && ! $use_app_only ) {
 				$warning = 'Could not retrieve an access token for (scope|query) ' . $scope . '|' . $query . '.  Error details: The current user is either not logged in, did not sign in using OpenID Connect Single Sign-On (SSO), or WPO365 does not have the necessary permissions to access data on behalf of the organization. Please review the "Application Access" settings on the plugin\'s "Integration" configuration page.';
 			}
@@ -105,8 +109,6 @@ if ( ! class_exists( '\Wpo\Services\Graph_Service' ) ) {
 				$access_token = Access_Token_Service::get_access_token( $scope );
 			} elseif ( $use_app_only ) {
 				$scope_host     = WordPress_Helpers::stripos( $scope, 'https://' ) !== false ? wp_parse_url( $scope, PHP_URL_HOST ) : 'graph.microsoft.com';
-				$tld            = $use_mail_config ? Options_Service::get_mail_option( 'mail_tld' ) : Options_Service::get_aad_option( 'tld' );
-				$tld            = ! empty( $tld ) ? $tld : '.com';
 				$scope_host     = str_replace( '.com', $tld, $scope_host );
 				$app_only_scope = "https://$scope_host/.default";
 				$scope_segments = explode( '/', rtrim( $scope, '/' ) );
@@ -176,7 +178,7 @@ if ( ! class_exists( '\Wpo\Services\Graph_Service' ) ) {
 				: self::GRAPH_VERSION
 			);
 
-			$url             = self::REST_API . $graph_version . $query;
+			$url             = str_replace( '.com', $tld, self::REST_API ) . $graph_version . $query;
 			$skip_ssl_verify = ! Options_Service::get_global_boolean_var( 'skip_host_verification' );
 			$timeout         = $request->get_item( 'timeout' );
 

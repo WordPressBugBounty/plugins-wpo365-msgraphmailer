@@ -108,8 +108,8 @@ if ( ! class_exists( '\Wpo\Services\Log_Service' ) ) {
 			}
 
 			// Flush to ApplicationInsights
-			$log_location           = Options_Service::get_global_string_var( 'debug_log_location', false );
-			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key', false );
+			$log_location           = Options_Service::get_global_string_var( 'debug_log_location' );
+			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key' );
 
 			if ( ! empty( $log_location ) && ! empty( $ai_instrumentation_key ) ) {
 				if ( $log_location === 'remotely' || $log_location === 'both' ) {
@@ -281,7 +281,7 @@ if ( ! class_exists( '\Wpo\Services\Log_Service' ) ) {
 		 * @return  array Associative array formatted according to Microsoft.ApplicationInsights.Message requirement
 		 */
 		private static function to_ai_message( $log_item ) {
-			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key', false );
+			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key' );
 
 			if ( $log_item['level'] === 'ERROR' ) {
 				$level = self::ERROR;
@@ -318,7 +318,7 @@ if ( ! class_exists( '\Wpo\Services\Log_Service' ) ) {
 		 * @return  array Associative array formatted according to Microsoft.ApplicationInsights.Exception requirement
 		 */
 		private static function to_ai_exception( $log_item ) {
-			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key', false );
+			$ai_instrumentation_key = Options_Service::get_global_string_var( 'ai_instrumentation_key' );
 
 			return array(
 				'data' => array(

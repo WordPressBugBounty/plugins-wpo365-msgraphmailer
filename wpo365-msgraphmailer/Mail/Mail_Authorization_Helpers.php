@@ -96,18 +96,6 @@ if ( ! class_exists( '\Wpo\Mail\Mail_Authorization_Helpers' ) ) {
 		public static function authorize_mail_user() {
 			Log_Service::write_log( 'DEBUG', sprintf( '##### -> %s', __METHOD__ ) );
 
-			/**
-			 * Let's clean any existing user and application-level tokens.
-			 */
-
-			delete_option( Access_Token_Service::SITE_META_ACCESS_TOKEN );
-
-			if ( Options_Service::mu_use_subsite_options() && ! Wpmu_Helpers::mu_is_network_admin() ) {
-				delete_option( 'wpo365_mail_authorization' );
-			} else {
-				delete_site_option( 'wpo365_mail_authorization' );
-			}
-
 			$request_service = Request_Service::get_instance();
 			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 
@@ -181,6 +169,12 @@ if ( ! class_exists( '\Wpo\Mail\Mail_Authorization_Helpers' ) ) {
 			 */
 
 			Wpmu_Helpers::switch_blog( $state );
+
+			/**
+			 * @since 45.1  Only now that the new authorization has been verified - and for the site that is being authorized -
+			 *              clear the cached application-level token. The existing mail authorization is overwritten below.
+			 */
+			delete_option( Access_Token_Service::SITE_META_ACCESS_TOKEN );
 
 			/**
 			 * Create a mail authorization object and save it in the site's options table.
