@@ -15,7 +15,7 @@
   ],
   "require": {
     "php": ">=7.4",
-    "phpseclib/phpseclib": "3.0.52",
+    "phpseclib/phpseclib": "3.0.58",
     "paragonie/constant_time_encoding": "^2.8"
   },
   "autoload": {

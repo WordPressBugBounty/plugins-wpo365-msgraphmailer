@@ -3,6 +3,7 @@
 namespace Wpo\Core;
 
 use Wpo\Core\WordPress_Helpers;
+use Wpo\Services\Log_Service;
 use Wpo\Services\Request_Service;
 
 // Prevent public access to this script
@@ -83,11 +84,7 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 					ARRAY_FILTER_USE_KEY
 				);
 
-				if ( $scope === 'site' ) {
-					update_option( 'wpo365_active_extensions', $active_extensions );
-				} else {
-					update_site_option( 'wpo365_active_extensions', $active_extensions );
-				}
+				self::save_active_extensions( $active_extensions, $scope );
 			}
 
 			return $active_extensions;
@@ -103,11 +100,11 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 			if ( $options['type'] === 'plugin' && ( $options['action'] === 'update' || $options['action'] === 'install' ) ) {
 
 				if ( is_multisite() ) {
-					delete_site_option( 'wpo365_active_extensions' );
+					self::delete_active_extensions( 'network' );
 					self::delete_every_site_cache();
 				}
 
-				delete_option( 'wpo365_active_extensions' );
+				self::delete_active_extensions( 'site' );
 			}
 		}
 
@@ -612,8 +609,150 @@ if ( ! class_exists( '\Wpo\Core\Extensions_Helpers' ) ) {
 			);
 
 			foreach ( $site_ids as $site_id ) {
-				delete_blog_option( $site_id, 'wpo365_active_extensions' );
+				switch_to_blog( $site_id );
+				self::delete_active_extensions( 'site' );
+				restore_current_blog();
 			}
+		}
+
+		/**
+		 * Saves the list of active extensions. When a persistent object cache still returns a list that is no longer in
+		 * the database, WordPress updates 0 rows and never inserts the row. The cached copy is then dropped and the list
+		 * saved again.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   array  $active_extensions   The list to save.
+		 * @param   string $scope               site or network.
+		 *
+		 * @return  void
+		 */
+		private static function save_active_extensions( $active_extensions, $scope ) {
+			$saved = self::update_stored_active_extensions( $active_extensions, $scope );
+
+			// False also means "unchanged". Without a persistent object cache, nothing can be out of sync.
+			if ( $saved || ! wp_using_ext_object_cache() || self::is_stored_active_extensions( $active_extensions, $scope ) ) {
+				return;
+			}
+
+			self::drop_cached_active_extensions( $scope );
+			self::update_stored_active_extensions( $active_extensions, $scope );
+
+			if ( self::is_stored_active_extensions( $active_extensions, $scope ) ) {
+				Log_Service::write_log(
+					'WARN',
+					sprintf(
+						'%s -> The object cache returned an outdated list of active WPO365 extensions (%s) that could not be updated. The cached copy has been dropped and the list has been saved again.',
+						__METHOD__,
+						$scope
+					)
+				);
+				return;
+			}
+
+			Log_Service::write_log(
+				'ERROR',
+				sprintf(
+					'%s -> Could not save the list of active WPO365 extensions (%s), even after dropping the copy in the object cache. Flush the object cache.',
+					__METHOD__,
+					$scope
+				)
+			);
+		}
+
+		/**
+		 * Deletes the list of active extensions. When the database row is already gone, delete_option() returns early and
+		 * leaves a copy in a persistent object cache in place, so that copy is dropped too.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   string $scope   site or network.
+		 *
+		 * @return  void
+		 */
+		private static function delete_active_extensions( $scope ) {
+
+			if ( $scope === 'site' ) {
+				$deleted = delete_option( 'wpo365_active_extensions' );
+			} else {
+				$deleted = delete_site_option( 'wpo365_active_extensions' );
+			}
+
+			if ( ! $deleted && wp_using_ext_object_cache() && self::get_stored_active_extensions( $scope ) !== false ) {
+				self::drop_cached_active_extensions( $scope );
+			}
+		}
+
+		/**
+		 * Drops the list of active extensions from the object cache, so that the next read gets it from the database.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   string $scope   site or network.
+		 *
+		 * @return  void
+		 */
+		private static function drop_cached_active_extensions( $scope ) {
+
+			if ( $scope === 'site' ) {
+				wp_cache_delete( 'wpo365_active_extensions', 'options' );
+				// As in wp_set_option_autoload_values(): reload alloptions, rather than write back an edited, possibly outdated copy.
+				wp_cache_delete( 'alloptions', 'options' );
+				return;
+			}
+
+			wp_cache_delete( get_current_network_id() . ':wpo365_active_extensions', 'site-options' );
+		}
+
+		/**
+		 * Reads the stored list of active extensions.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   string $scope   site or network.
+		 *
+		 * @return  mixed   The stored list of active extensions, or false if there is none.
+		 */
+		private static function get_stored_active_extensions( $scope ) {
+
+			if ( $scope === 'site' ) {
+				return get_option( 'wpo365_active_extensions' );
+			}
+
+			return get_site_option( 'wpo365_active_extensions' );
+		}
+
+		/**
+		 * Writes the list of active extensions.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   array  $active_extensions   The list to save.
+		 * @param   string $scope               site or network.
+		 *
+		 * @return  bool    True if the stored list was updated.
+		 */
+		private static function update_stored_active_extensions( $active_extensions, $scope ) {
+
+			if ( $scope === 'site' ) {
+				return update_option( 'wpo365_active_extensions', $active_extensions );
+			}
+
+			return update_site_option( 'wpo365_active_extensions', $active_extensions );
+		}
+
+		/**
+		 * Compares the stored list with $active_extensions the way update_option() does.
+		 *
+		 * @since   45.2
+		 *
+		 * @param   array  $active_extensions   The list to compare with.
+		 * @param   string $scope               site or network.
+		 *
+		 * @return  bool
+		 */
+		private static function is_stored_active_extensions( $active_extensions, $scope ) {
+			return maybe_serialize( self::get_stored_active_extensions( $scope ) ) === maybe_serialize( $active_extensions );
 		}
 	}
 }

@@ -278,8 +278,22 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 				exit();
 			}
 
-			// Check against replay attack
-			Saml2_Service::check_message_id( $auth->getLastMessageId() );
+			// A SAML response can be used only once. record_assertion() has already logged why it refuses one.
+			$recorded = Saml2_Service::record_assertion( $auth );
+
+			if ( is_wp_error( $recorded ) ) {
+				$error_code = $recorded->get_error_code();
+
+				if ( $error_code === 'replayed' ) {
+					self::goodbye( Error_Service::TAMPERED_WITH );
+				} elseif ( $error_code === 'db_error' ) {
+					self::goodbye( Error_Service::CHECK_LOG );
+				} else {
+					self::goodbye( Error_Service::SAML2_ERROR );
+				}
+
+				exit();
+			}
 
 			// Abstraction to WPO365 User
 			$saml_attributes = $auth->getAttributes();

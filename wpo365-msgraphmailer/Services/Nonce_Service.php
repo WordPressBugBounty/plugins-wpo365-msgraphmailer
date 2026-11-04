@@ -93,11 +93,15 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 		 *
 		 * Calls Authentication_Service::goodbye() and exits on failure, unless "Skip NONCE-verification" is on:
 		 *   - Nonce not found, already used, missing or unreadable → Error_Service::TAMPERED_WITH
+		 *   - Nonce used by another request at the same moment     → Error_Service::TAMPERED_WITH
+		 *   - Nonce could not be marked as used (database error)   → Error_Service::TAMPERED_WITH
 		 *   - Nonce older than 5 min                               → Error_Service::NONCE_EXPIRED
 		 *
 		 * @since   45.1    A nonce is marked as used (used_at) instead of deleted, also when it has expired, so that a later
 		 *                  attempt with the same nonce is recognized as such. Each failed check writes a WARN line that says
 		 *                  why. The 24-hour purge in create_nonce() deletes marked nonces too.
+		 * @since   45.2    Marking the nonce as used decides whether this request may use it: when another request marked
+		 *                  it first, or it could not be marked, the nonce is refused.
 		 *
 		 * @param mixed $nonce
 		 * @return void
@@ -147,7 +151,20 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 				return;
 			}
 
-			self::mark_as_used( $nonce, $can_mark );
+			// The UPDATE (or DELETE) decides: of two requests with the same nonce at the same moment, only one changes the row.
+			$marked = self::mark_as_used( $nonce, $can_mark );
+
+			if ( $marked === 0 ) {
+				Log_Service::write_log( 'WARN', sprintf( '%s -> %s', __METHOD__, self::get_failure_message( 'concurrent', $nonce, $created ) ) );
+				self::refuse( $skip );
+				return;
+			}
+
+			// The nonce is still unused, so it must not be accepted. mark_as_used() has already logged the database error.
+			if ( $marked === false ) {
+				self::refuse( $skip );
+				return;
+			}
 
 			if ( time() - $created > 300 ) {
 				Log_Service::write_log( 'WARN', sprintf( '%s -> %s', __METHOD__, self::get_failure_message( 'expired', $nonce, $created ) ) );
@@ -243,33 +260,34 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 		/**
 		 * Marks a nonce as used - or deletes it, when the table has no used_at column.
 		 *
+		 * @since 45.2  Returns the number of rows changed, so that the caller can tell whether this request used the nonce.
+		 *
 		 * @param string $nonce
 		 * @param bool   $can_mark Whether the table has the used_at column.
 		 *
-		 * @return void
+		 * @return int|false 1 if this request used the nonce, 0 if another request used it first, false on a database error.
 		 */
 		private static function mark_as_used( $nonce, $can_mark ) {
 			global $wpdb;
 
 			if ( ! $can_mark ) {
-				$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				$updated = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 					self::table_name(),
 					array( 'nonce' => $nonce ),
 					array( '%s' )
 				);
-				return;
+			} else {
+				$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+					self::table_name(),
+					array( 'used_at' => current_time( 'mysql', true ) ),
+					array(
+						'nonce'   => $nonce,
+						'used_at' => null,
+					),
+					array( '%s' ),
+					array( '%s', '%s' )
+				);
 			}
-
-			$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-				self::table_name(),
-				array( 'used_at' => current_time( 'mysql', true ) ),
-				array(
-					'nonce'   => $nonce,
-					'used_at' => null,
-				),
-				array( '%s' ),
-				array( '%s', '%s' )
-			);
 
 			if ( $updated === false ) {
 				Log_Service::write_log(
@@ -282,6 +300,8 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 					)
 				);
 			}
+
+			return $updated;
 		}
 
 		/**
@@ -312,7 +332,7 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 		 * The log message for a failed nonce check: the reason, the nonce's fingerprint, when it was created and how old it
 		 * is, plus a hint about the likely cause.
 		 *
-		 * @param string   $reason  used, expired, missing, foreign, no_claim or db_error.
+		 * @param string   $reason  used, concurrent, expired, missing, foreign, no_claim or db_error.
 		 * @param string   $nonce
 		 * @param int|null $created Unix time the nonce was created, or null if unknown.
 		 *
@@ -326,6 +346,9 @@ if ( ! class_exists( '\Wpo\Services\Nonce_Service' ) ) {
 			switch ( $reason ) {
 				case 'used':
 					$hint = 'This sign-in link has been used before. If it happens once, the user probably went back to the Microsoft page, or used the browser history, a restored tab or a bookmark. If it happens to many users with the same fingerprint, the redirect to Microsoft (e.g. /wpo/sso/start) is probably being cached. A HAR file of a failed sign-in can confirm this.';
+					break;
+				case 'concurrent':
+					$hint = 'Two requests tried to use this nonce at the same moment, and only the first was accepted. If this happens to regular users, the sign-in response was probably sent twice, e.g. by a double submit or a browser extension.';
 					break;
 				case 'expired':
 					$hint = $age < 1800

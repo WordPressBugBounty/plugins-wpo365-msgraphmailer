@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.3
+Stable tag: 6.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,12 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.4 =
+
+* Security: Hardened the nonce check of the mail authorization.
+* Security: Updated phpseclib to version 3.0.58 (was 3.0.52).
+* Fix: On websites with a persistent object cache (e.g. Redis or Memcached), the WPO365 configuration no longer shows premium features as locked when the cache held an outdated list of active premium plugins. Opening the configuration, the "Verify license and check for plugin updates" button on the Licenses page and (de)activating a premium plugin now repair the list.
 
 = 6.3 =
 

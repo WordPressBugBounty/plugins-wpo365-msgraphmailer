@@ -276,17 +276,18 @@ if ( ! class_exists( '\Wpo\Core\Plugin_Helpers' ) ) {
 				wp_die( 'Forbidden', '403 Forbidden', array( 'response' => 403 ) );
 			}
 
-			// Force a fresh iteration of all WPO365 extensions.
-
-			if ( isset( $_REQUEST['is_network_admin'] ) && $_REQUEST['is_network_admin'] === '1' ) {
-				delete_site_option( 'wpo365_active_extensions' );
-			} else {
-				delete_option( 'wpo365_active_extensions' );
-			}
-
 			// Force getting fresh data from the WPO365.com server.
 			delete_site_transient( 'wpo365_plugins_updated' );
 			wp_clean_plugins_cache( true );
+
+			// Force a fresh iteration of all WPO365 extensions. Rebuilt rather than deleted, because a delete cannot
+			// clear an outdated copy in a persistent object cache when the database row is already gone.
+
+			if ( isset( $_REQUEST['is_network_admin'] ) && $_REQUEST['is_network_admin'] === '1' ) {
+				Extensions_Helpers::get_active_extensions( true, 'network' );
+			} else {
+				Extensions_Helpers::get_active_extensions( true );
+			}
 
 			$goto_after = isset( $_REQUEST['request_url'] ) ? $_REQUEST['request_url'] : ( is_network_admin() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) ); // phpcs:ignore
 			wp_safe_redirect( $goto_after );

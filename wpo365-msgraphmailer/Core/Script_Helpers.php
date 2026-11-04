@@ -61,7 +61,7 @@ if ( ! class_exists( '\Wpo\Core\Script_Helpers' ) ) {
 			global $wp_roles;
 
 			$extensions = array();
-			$addons     = Extensions_Helpers::get_active_extensions(); // All activated extensions
+			$addons     = Extensions_Helpers::get_active_extensions( true ); // All activated extensions, rebuilt so an outdated cached list cannot lock premium features
 
 			$add_extension = function ( $slug, $extension ) use ( &$extensions, $addons ) {
 

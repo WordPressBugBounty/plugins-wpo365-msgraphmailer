@@ -247,24 +247,22 @@ if ( ! class_exists( '\Wpo\Core\Shortcode_Helpers' ) ) {
 			 * @since 28.x  Validates the script URL and replaces the major part of the URL.
 			 */
 
-			$script_url = ! empty( $atts['script_url'] ) ? html_entity_decode( $atts['script_url'] ) : '';
-			$script_url = self::validate_script_url( $script_url );
+			$plugin_folder = '';
+			$script_url    = ! empty( $atts['script_url'] ) ? html_entity_decode( $atts['script_url'] ) : '';
+			$script_url    = self::validate_script_url( $script_url, $plugin_folder );
 
 			/**
 			 * @since 39.x  Deprecated apps will bootstrap using the builtin app-launcher. An app is deemed deprecated
 			 *              if the common Toast component is not found in the root of the "apps//dist" folder.
+			 * @since 45.2  Looks in the plugin's folder below WP_PLUGIN_DIR, because wp-content is not always below ABSPATH.
 			 */
 
-			$base_url    = site_url();
-			$base_path   = ABSPATH;
 			$is_vite_app = false;
 
-			if ( stripos( $script_url, $base_url ) === 0 ) {
-				$clean_url         = explode( '?', $script_url )[0];
-				$relative_path     = dirname( str_replace( $base_url, '', $clean_url ) );
-				$file_path_pattern = $base_path . rtrim( ltrim( $relative_path, '/' ), '/' ) . '/Toast.*';
-				$files             = glob( $file_path_pattern );
-				$is_vite_app       = ! empty( $files ); // The Toast component was first introduced when apps were built with vite.
+			// The folder comes from a shortcode attribute, and glob() treats * ? [ (and \ on Windows) specially.
+			if ( preg_match( '/^wpo365[A-Za-z0-9_-]*\z/', $plugin_folder ) ) {
+				$files       = glob( trailingslashit( WP_PLUGIN_DIR ) . $plugin_folder . '/apps/dist/Toast.*' );
+				$is_vite_app = ! empty( $files ); // The Toast component was first introduced when apps were built with vite.
 
 				if ( ! $is_vite_app ) {
 					Compatibility_Helpers::compat_warning(
@@ -637,11 +635,13 @@ if ( ! class_exists( '\Wpo\Core\Shortcode_Helpers' ) ) {
 		 * the script is located in the WPO365 apps/dist folder.
 		 *
 		 * @since 28.x
+		 * @since 45.2  Hands back the plugin folder through $folder.
 		 *
-		 * @param mixed $script_url
+		 * @param mixed  $script_url
+		 * @param string $folder      Set to the plugin folder when the script URL is valid.
 		 * @return string
 		 */
-		private static function validate_script_url( $script_url ) {
+		private static function validate_script_url( $script_url, &$folder = '' ) {
 			if ( empty( $script_url ) ) {
 				return '';
 			}
@@ -674,6 +674,8 @@ if ( ! class_exists( '\Wpo\Core\Shortcode_Helpers' ) ) {
 				);
 				return '';
 			}
+
+			$folder = $plugin_folder;
 
 			$script_relative_url = sprintf(
 				'%s/apps/dist/%s',

@@ -183,8 +183,15 @@ if ( ! class_exists( '\Wpo\Insights\Event_Service' ) ) {
 				$category = 'WP';
 			}
 
+			// Details that the code refusing the sign-in added, e.g. the NameID of a replayed SAML response.
+			$data = $request->get_item( 'loggedin_fail_data' );
+
+			if ( empty( $data ) || Options_Service::get_global_boolean_var( 'insights_anonymized' ) ) {
+				$data = null;
+			}
+
 			$user  = self::get_event_user( 0, $wpo_user );
-			$event = new Event( 'wpo365/user/loggedin', $category, $user, null, $error, 'ERROR', 'NOK' );
+			$event = new Event( 'wpo365/user/loggedin', $category, $user, $data, $error, 'ERROR', 'NOK' );
 			self::add_event( $event );
 
 			Options_Service::get_global_boolean_var( 'insights_alerts_login' ) && do_action( 'wpo365/insights/notify', $error, $category );
