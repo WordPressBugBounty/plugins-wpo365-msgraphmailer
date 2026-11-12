@@ -78,6 +78,27 @@ if ( ! class_exists( '\Wpo\Core\WordPress_Helpers' ) ) {
 		}
 
 		/**
+		 * Converts a string from the server's ANSI code page (e.g. Windows-1252) to UTF-8. IIS passes REQUEST_URI decoded
+		 * and in that code page. Valid UTF-8, and any string on another operating system, is returned unchanged.
+		 * Secure_Download_Handler::ansi_to_utf8() is the same, for the proxy that runs before WordPress loads.
+		 *
+		 * @since   45.3
+		 *
+		 * @param   string $value
+		 * @return  string
+		 */
+		public static function ansi_to_utf8( $value ) {
+
+			if ( preg_match( '//u', $value ) === 1 || ! function_exists( 'sapi_windows_cp_conv' ) || ! function_exists( 'sapi_windows_cp_get' ) ) {
+				return $value;
+			}
+
+			$converted = sapi_windows_cp_conv( sapi_windows_cp_get( 'ansi' ), 65001, $value );
+
+			return is_string( $converted ) ? $converted : $value;
+		}
+
+		/**
 		 * Helper to base64 URL decode.
 		 *
 		 * @param   string $arg Input to be decoded.

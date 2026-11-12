@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.4
+Stable tag: 6.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,11 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.5 =
+
+* Fix: The Mail Audit Log now also records an error when WordPress itself fails to send an email, e.g. because of an invalid From address. It now also reliably records a separate entry for each email when more than one email is sent in the same request. Requires the WPO365 | MAIL premium paid plugin.
+* Fix: Resending an email from the Mail Log Viewer, and automatically retrying a failed email, now works when the email was sent to a comma-separated list of recipients (e.g. by a Gravity Forms notification). Before, every retry failed with "no valid recipient has been specified". Requires the WPO365 | MAIL premium paid plugin.
 
 = 6.4 =
 

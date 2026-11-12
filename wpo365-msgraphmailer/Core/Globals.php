@@ -77,6 +77,21 @@ if ( ! class_exists( '\Wpo\Core\Globals' ) ) {
 
 			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : ''; // phpcs:ignore
 
+			/**
+			 * @since   45.3    IIS passes REQUEST_URI decoded and in the server's ANSI code page, where Apache and nginx pass
+			 *                  what the browser sent: non-ASCII characters percent-encoded as UTF-8. Bring it into that
+			 *                  form, because wp_sanitize_redirect() drops bytes that are not valid UTF-8 from redirect URLs.
+			 */
+			if ( preg_match( '/[\x80-\xFF]/', $request_uri ) === 1 ) {
+				$request_uri = preg_replace_callback(
+					'/[\x80-\xFF]+/',
+					function ( $matches ) {
+						return rawurlencode( $matches[0] );
+					},
+					WordPress_Helpers::ansi_to_utf8( $request_uri )
+				);
+			}
+
 			if ( ! empty( $request_uri ) ) {
 				// Split off the query string first so the path-only sanitization below can
 				// never mistake a "//" inside a query value (e.g. redirect_to=https://...)

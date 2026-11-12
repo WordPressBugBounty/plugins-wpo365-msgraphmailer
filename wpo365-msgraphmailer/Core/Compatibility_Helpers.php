@@ -335,6 +335,53 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 		}
 
 		/**
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
+		 * Folder" is on, but the website's layout prevents it from protecting Media Library items. The .htaccess rule the
+		 * premium plugin writes assumes WordPress in the root of the website, with the default wp-content/uploads and
+		 * wp-content/plugins/wpo365-login folders. The download proxy loads WordPress from the folder above wp-content.
+		 * Otherwise Media Library items stay public, or don't load at all. A default layout is recognised from values in
+		 * memory first, so that the detailed checks only run for an unusual layout.
+		 *
+		 * @since   45.3
+		 *
+		 * @return  void
+		 */
+		public static function check_media_folder_layout() {
+
+			// Not during the wizard's toggle request, and not without a premium plugin: check_media_folder_without_premium() warns then.
+			if (
+				wp_doing_ajax()
+				|| ! Options_Service::get_global_boolean_var( 'block_direct_media_access' )
+				|| ! class_exists( '\Wpo\Services\Secure_Download_Service' )
+			) {
+				return;
+			}
+
+			// In dedicated mode the network admin's option governs no site.
+			if ( Options_Service::mu_use_subsite_options() && Wpmu_Helpers::mu_is_network_admin() ) {
+				return;
+			}
+
+			if ( self::media_folder_layout_is_default() ) {
+				return;
+			}
+
+			$reasons = self::media_folder_layout_problems();
+
+			if ( empty( $reasons ) ) {
+				return;
+			}
+
+			self::compat_warning(
+				sprintf(
+					'%s -> <em>Require login for the Media Folder</em> is switched on, but WPO365 cannot protect the Media Library on this website, because %s. Depending on the layout, Media Library items can be opened without signing in, or they don\'t load at all. To check, open a Media Library item in a private browser window: it should ask you to sign in. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for the supported layouts.',
+					__METHOD__,
+					implode( '; ', $reasons )
+				)
+			);
+		}
+
+		/**
 		 * Whether the WPO365 block in .htaccess still carries the earlier Referer exception - an Apache-only rule that
 		 * weakened the access check for Media Library items. Read directly from the file (scoped to WPO365's own marker
 		 * block), so it does not depend on the admin-only extract_from_markers() being loaded. Used once, from the
@@ -810,6 +857,128 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			$upgrade_actions[] = 'license_keys_from_db';
 			Options_Service::add_update_option( 'upgrade_actions', $upgrade_actions );
+		}
+
+		/**
+		 * Whether this website has the default layout "Require login for the Media Folder" expects, judged only from values
+		 * WordPress already holds in memory: the constants it derives from ABSPATH unless wp-config.php overrides them
+		 * (default-constants.php), autoloaded options and the site's address. No file system access. When it returns true,
+		 * media_folder_layout_problems() can't find a problem either; anything unusual is left to it.
+		 *
+		 * @since   45.3
+		 *
+		 * @return  bool
+		 */
+		private static function media_folder_layout_is_default() {
+			$wp_root     = untrailingslashit( wp_normalize_path( ABSPATH ) );
+			$login_dir   = isset( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) ? untrailingslashit( wp_normalize_path( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) ) : '';
+			$upload_path = trim( (string) get_option( 'upload_path' ) );
+
+			// The folders, and the uploads folder and URL as _wp_upload_dir() derives them when nothing overrides them.
+			if (
+				untrailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ) !== $wp_root . '/wp-content'
+				|| $login_dir !== $wp_root . '/wp-content/plugins/wpo365-login'
+				|| defined( 'UPLOADS' )
+				|| ( $upload_path !== '' && $upload_path !== 'wp-content/uploads' )
+				|| (string) get_option( 'upload_url_path' ) !== ''
+				|| WP_CONTENT_URL !== get_option( 'siteurl' ) . '/wp-content'
+				|| has_filter( 'upload_dir' )
+				|| ( is_multisite() && get_site_option( 'ms_files_rewriting' ) )
+			) {
+				return false;
+			}
+
+			// WordPress in the root of the website, as in media_folder_layout_problems().
+			$site_path = untrailingslashit( (string) wp_parse_url( site_url(), PHP_URL_PATH ) );
+
+			if ( ! is_multisite() ) {
+				return $site_path === '';
+			}
+
+			$network = get_network();
+			$site    = get_site();
+
+			return $network && $network->path === '/' && $site && $site_path === untrailingslashit( $site->path );
+		}
+
+		/**
+		 * Why "Require login for the Media Folder" cannot work with this website's layout, if at all. See
+		 * check_media_folder_layout().
+		 *
+		 * @since   45.3
+		 *
+		 * @return  string[]  The reasons as HTML-safe clauses; empty for a supported layout.
+		 */
+		private static function media_folder_layout_problems() {
+			$reasons   = array();
+			$wp_root   = trailingslashit( ABSPATH );
+			$login_dir = isset( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) ? untrailingslashit( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) : dirname( __DIR__ );
+
+			// The proxy loads wp-load.php from dirname( __DIR__, 4 ) of Core/Secure_Download_Handler.php. Checked on every web
+			// server, because a rule written by hand doesn't change that.
+			if ( realpath( dirname( $login_dir, 3 ) ) !== realpath( $wp_root ) ) {
+				$reasons[] = 'WPO365 cannot load WordPress for requests for Media Library items, because the wp-content folder is not inside the WordPress folder';
+			}
+
+			// WPO365 only writes its rule for Apache and LiteSpeed. Elsewhere the administrator writes it, possibly to fit the layout.
+			if ( empty( $GLOBALS['is_apache'] ) ) {
+				return $reasons;
+			}
+
+			// On a multisite network the network must be in the root of the website, and a site's own path is its root.
+			$site_path     = untrailingslashit( (string) wp_parse_url( site_url(), PHP_URL_PATH ) );
+			$expected_path = '';
+
+			if ( is_multisite() ) {
+				$network = get_network();
+				$site    = get_site();
+
+				if ( $network && $network->path !== '/' ) {
+					$reasons[] = sprintf( 'the network is installed in a subfolder (%s) instead of the root of the website', esc_html( untrailingslashit( $network->path ) ) );
+				}
+
+				$expected_path = $site ? untrailingslashit( $site->path ) : '';
+			}
+
+			if ( $site_path !== $expected_path ) {
+				$reasons[] = sprintf( 'WordPress is installed in a subfolder (%s) instead of the root of the website', esc_html( $site_path ) );
+			}
+
+			// A site's own uploads folder ends with sites/<id> on a network; the rule covers the folder above it.
+			$uploads      = wp_upload_dir( null, false );
+			$basedir      = untrailingslashit( (string) $uploads['basedir'] );
+			$sites_suffix = '';
+
+			if ( preg_match( '#/sites/\d+$#', str_replace( '\\', '/', $basedir ), $matches ) === 1 ) {
+				$sites_suffix = $matches[0];
+				$basedir      = substr( $basedir, 0, -strlen( $sites_suffix ) );
+			}
+
+			// Compared with realpath(), so that symlinked folders count as equal. A folder that doesn't exist yet is not judged.
+			$real_basedir = realpath( $basedir );
+
+			if ( $real_basedir !== false && $real_basedir !== realpath( $wp_root . 'wp-content/uploads' ) ) {
+				$reasons[] = sprintf( 'the uploads folder (%s) is not wp-content/uploads in the WordPress folder', esc_html( $basedir ) );
+			}
+
+			if ( realpath( $login_dir ) !== realpath( $wp_root . 'wp-content/plugins/wpo365-login' ) ) {
+				$reasons[] = sprintf( 'the WPO365 | LOGIN plugin folder (%s) is not wp-content/plugins/wpo365-login in the WordPress folder', esc_html( $login_dir ) );
+			}
+
+			// E.g. upload_url_path pointing to another host. The scheme doesn't matter. On a network a WP_CONTENT_URL defined in
+			// wp-config.php leaves out the site's path, which the network's rule (site prefix optional) also covers.
+			$baseurl           = set_url_scheme( untrailingslashit( (string) $uploads['baseurl'] ), 'https' );
+			$expected_baseurls = array( set_url_scheme( untrailingslashit( site_url() ) . '/wp-content/uploads' . $sites_suffix, 'https' ) );
+
+			if ( is_multisite() ) {
+				$expected_baseurls[] = set_url_scheme( untrailingslashit( network_site_url( 'wp-content/uploads' . $sites_suffix ) ), 'https' );
+			}
+
+			if ( ! in_array( $baseurl, $expected_baseurls, true ) ) {
+				$reasons[] = sprintf( 'Media Library items are served from %s instead of %s', esc_html( $baseurl ), esc_html( $expected_baseurls[0] ) );
+			}
+
+			return $reasons;
 		}
 	}
 }

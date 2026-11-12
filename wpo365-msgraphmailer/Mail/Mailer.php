@@ -354,9 +354,10 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 			$save_sent       = Options_Service::get_global_boolean_var( 'mail_save_to_sent_items' );
 			$message_as_json = self::email_message_encode( $this->phpmailer_data->Subject, $to, $this->phpmailer_data->Body, $cc, $bcc, $reply_to, $content_type, $save_sent, $attachments, ! empty( $large_attachments ), $send_from, $internet_message_headers );
 
+			// skip_duplicate_check is set by a test email or a resend, which clear it once wp_mail() returns, so that the 403 retry below also skips the check.
 			$request_service      = Request_Service::get_instance();
 			$request              = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
-			$skip_duplicate_check = $request->get_item( 'skip_duplicate_check' ); // E.g. When manually sending again or sending a test-email.
+			$skip_duplicate_check = $request->get_item( 'skip_duplicate_check' );
 
 			if ( empty( $skip_duplicate_check ) && self::is_duplicate_message( $message_as_json ) ) {
 				$log_message = sprintf(
@@ -366,9 +367,10 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 				);
 				Log_Service::write_log( 'WARN', sprintf( '%s -> %s', __METHOD__, $log_message ) );
 				self::update_mail_log( $log_message, false, 'WARN', false );
+
+				// Not a counted attempt (auto-retry would resend the duplicate), so end the mail log entry here.
+				$request->remove_item( 'mail_log_id' );
 				return true;
-			} else {
-				$request->remove_item( '$skip_duplicate_check' );
 			}
 
 			$query        = empty( $large_attachments )
@@ -547,7 +549,11 @@ if ( ! class_exists( '\Wpo\Mail\Mailer' ) ) {
 			$request         = $request_service->get_request( $GLOBALS['WPO_CONFIG']['request_id'] );
 			$request->set_item( 'skip_duplicate_check', 'true' );
 
-			return wp_mail( $_to, $subject, $content, $headers, $attachments );
+			$sent = wp_mail( $_to, $subject, $content, $headers, $attachments );
+
+			$request->remove_item( 'skip_duplicate_check' );
+
+			return $sent;
 		}
 
 		/**
