@@ -139,8 +139,8 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is switched on for a multisite network, but the active premium plugin predates multisite support (it
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is switched on for a multisite network, but the active premium plugin predates multisite support (it
 		 * has no authorize_request()), so it may not protect the files of every site.
 		 *
 		 * @since   45.0
@@ -161,15 +161,15 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> <em>Require login for the Media Folder</em> is switched on, but your WPO365 premium plugin does not yet support WordPress multisite networks and may not protect your files. Please update the premium plugin to version 45.1 or later, or turn the option off on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page.',
+					'%s -> <em>Media Library Protection</em> is switched on, but your WPO365 premium plugin does not yet support WordPress multisite networks and may not protect your files. Please update the premium plugin to version 45.1 or later, or turn the option off on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page.',
 					__METHOD__
 				)
 			);
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is on but its rules are missing from .htaccess, outdated, or (on a multisite network) not where they
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on but its rules are missing from .htaccess, outdated, or (on a multisite network) not where they
 		 * take effect. That happens when the option is switched on without the wizard's toggle, e.g. by importing a
 		 * configuration, because only the toggle writes the rules.
 		 *
@@ -178,6 +178,8 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 		 * loads WordPress, which applies the option.
 		 *
 		 * @since   45.1
+		 * @since   45.5    Says what's wrong and how to fix it, with a premium plugin that has htaccess_rules_problem(). Not
+		 *                  on a server that doesn't read .htaccess.
 		 *
 		 * @return  void
 		 */
@@ -202,21 +204,37 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 				Secure_Download_Handler::delete_public_entry( get_current_blog_id() );
 			}
 
+			// A server that doesn't read .htaccess (e.g. nginx) routes with a rule of its own, which
+			// check_media_folder_routing() checks.
+			if ( empty( $GLOBALS['is_apache'] ) ) {
+				return;
+			}
+
+			if ( method_exists( '\Wpo\Services\Secure_Download_Service', 'htaccess_rules_problem' ) ) {
+				$problem = \Wpo\Services\Secure_Download_Service::htaccess_rules_problem();
+
+				if ( $problem !== '' ) {
+					self::compat_warning( sprintf( '%s -> %s', __METHOD__, self::media_folder_rules_message( $problem ) ) );
+				}
+
+				return;
+			}
+
 			if ( \Wpo\Services\Secure_Download_Service::htaccess_rules_applied() ) {
 				return;
 			}
 
 			self::compat_warning(
 				sprintf(
-					'%s -> <em>Require login for the Media Folder</em> is switched on, but its rules are missing from .htaccess or in the wrong place, so Media Library items may not be protected. Please switch the option off and on again on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page to rewrite the rules. That also clears this message if your web server (e.g. nginx) uses its own rules instead of .htaccess. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+					'%s -> <em>Media Library Protection</em> is switched on, but its rules are missing from .htaccess or in the wrong place, so Media Library items may not be protected. Please switch the option off and on again on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page to rewrite the rules, and then click <em>Dismiss all</em>. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
 					__METHOD__
 				)
 			);
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is on but the directory that caches its signing key cannot be written. The feature still protects files;
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on but the directory that caches its signing key cannot be written. The feature still protects files;
 		 * it just takes the slow (full WordPress load) path on every request until the directory is writable.
 		 *
 		 * @since   45.1
@@ -236,7 +254,7 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> <em>Require login for the Media Folder</em> is active but WPO365 cannot write to the <em>wp-content</em> folder to cache its signing key, so every protected item in the Media Library will load WordPress in full. Your files stay protected, but to restore performance please make the <em>wp-content</em> folder writable. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder</a> for details.',
+					'%s -> <em>Media Library Protection</em> is active but WPO365 cannot write to the <em>wp-content</em> folder to cache its signing key, so every protected item in the Media Library will load WordPress in full. Your files stay protected, but to restore performance please make the <em>wp-content</em> folder writable. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder</a> for details.',
 					__METHOD__
 				)
 			);
@@ -244,7 +262,7 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 		/**
 		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that requests are still being
-		 * routed through the Media Folder download proxy even though "Require login for the Media Folder" is off. Each
+		 * routed through the Media Library download proxy even though "Media Library Protection" is off. Each
 		 * such request loads WordPress in full - a real performance hit - and the fix is to remove the rewrite rules
 		 * that WPO365 does not manage (a hand-written nginx or LiteSpeed rule, or a leftover block in .htaccess).
 		 *
@@ -266,15 +284,15 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> Requests for Media Library items are still being routed through WPO365\'s download proxy, even though <em>Require login for the Media Folder</em> is switched off. This loads WordPress for every such request and will slow down your website. Please remove WPO365\'s rewrite rules from your web server configuration (for example a hand-written nginx or LiteSpeed rule, or a leftover block in .htaccess), or switch the option back on if the protection was intended. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+					'%s -> Requests for Media Library items are still being routed through WPO365\'s download proxy, even though <em>Media Library Protection</em> is switched off. This loads WordPress for every such request and will slow down your website. Please remove WPO365\'s rewrite rules from your web server configuration (for example a hand-written nginx or LiteSpeed rule, or a leftover block in .htaccess), or switch the option back on if the protection was intended. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
 					__METHOD__
 				)
 			);
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is on but the premium plugin that provides it predates the 45.1 security improvements: its download
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on but the premium plugin that provides it predates the 45.1 security improvements: its download
 		 * service has no MLDA_VER constant (a counter, not a plugin version), or an older one. A warning only, so that
 		 * Media Library items keep working until the premium plugin is updated.
 		 *
@@ -300,15 +318,15 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> Please update your WPO365 premium plugin(s) to the latest version, so that the security improvements for <em>Require login for the Media Folder</em> are fully applied. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+					'%s -> Please update your WPO365 premium plugin(s) to the latest version, so that the security improvements for <em>Media Library Protection</em> are fully applied. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
 					__METHOD__
 				)
 			);
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is on but no active premium plugin provides it. Core/Secure_Download_Handler.php then serves Media
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on but no active premium plugin provides it. Core/Secure_Download_Handler.php then serves Media
 		 * Library items as public, because only an active plugin's download service may decide who gets them.
 		 *
 		 * @since   45.1
@@ -328,21 +346,24 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> <em>Require login for the Media Folder</em> is switched on, but no active WPO365 premium plugin provides it. Therefore, items in the Media Library are currently not protected. Please activate the premium plugin again. If you no longer want to use the feature, switch it off on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page while the premium plugin is active, and only then deactivate it. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+					'%s -> <em>Media Library Protection</em> is switched on, but no active WPO365 premium plugin provides it. Therefore, items in the Media Library are currently not protected. Please activate the premium plugin again. If you no longer want to use the feature, switch it off on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page while the premium plugin is active, and only then deactivate it. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
 					__METHOD__
 				)
 			);
 		}
 
 		/**
-		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Require login for the Media
-		 * Folder" is on, but the website's layout prevents it from protecting Media Library items. The .htaccess rule the
-		 * premium plugin writes assumes WordPress in the root of the website, with the default wp-content/uploads and
-		 * wp-content/plugins/wpo365-login folders. The download proxy loads WordPress from the folder above wp-content.
-		 * Otherwise Media Library items stay public, or don't load at all. A default layout is recognised from values in
-		 * memory first, so that the detailed checks only run for an unusual layout.
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on, but the website's layout prevents it from protecting Media Library items. The .htaccess rule an
+		 * older premium plugin writes into the root .htaccess assumes WordPress in the root of the website, with the
+		 * default wp-content/uploads and wp-content/plugins/wpo365-login folders. A premium plugin that writes the rule
+		 * into the uploads folder's .htaccess only requires the media to be served by this website. The download proxy
+		 * must find WordPress (Secure_Download_Handler::wp_root()). Otherwise Media Library items stay public, or don't
+		 * load at all. A default layout is recognised from values in memory first, so that the detailed checks only run
+		 * for an unusual layout.
 		 *
 		 * @since   45.3
+		 * @since   45.5    Fewer reasons with a premium plugin that writes the rule into the uploads folder.
 		 *
 		 * @return  void
 		 */
@@ -374,9 +395,56 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 
 			self::compat_warning(
 				sprintf(
-					'%s -> <em>Require login for the Media Folder</em> is switched on, but WPO365 cannot protect the Media Library on this website, because %s. Depending on the layout, Media Library items can be opened without signing in, or they don\'t load at all. To check, open a Media Library item in a private browser window: it should ask you to sign in. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for the supported layouts.',
+					'%s -> <em>Media Library Protection</em> is switched on, but WPO365 cannot protect the Media Library on this website, because %s. Depending on the layout, Media Library items can be opened without signing in, or they don\'t load at all. To check, open a Media Library item in a private browser window: it should ask you to sign in. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for the supported layouts.',
 					__METHOD__,
 					implode( '; ', $reasons )
+				)
+			);
+		}
+
+		/**
+		 * Warns the administrator - whilst an administrator is viewing a WP Admin page - that "Media Library Protection"
+		 * is on, but a test request for a Media Library item didn't reach WPO365 (Media_Library_Protection_Helpers::probe()),
+		 * for example because the web server ignores the .htaccess file in the uploads folder, nginx has no rule for
+		 * WPO365, or media are served from another host. Reads the stored result, and only sends a new test request when
+		 * there is none (for example after switching the option on) or it's older than a day.
+		 *
+		 * @since   45.5
+		 *
+		 * @return  void
+		 */
+		public static function check_media_folder_routing() {
+
+			// Not during the wizard's toggle request, and not without a premium plugin: check_media_folder_without_premium() warns then.
+			if (
+				wp_doing_ajax()
+				|| ! Options_Service::get_global_boolean_var( 'block_direct_media_access' )
+				|| ! class_exists( '\Wpo\Services\Secure_Download_Service' )
+			) {
+				return;
+			}
+
+			// In dedicated mode the network admin's option governs no site.
+			if ( Options_Service::mu_use_subsite_options() && Wpmu_Helpers::mu_is_network_admin() ) {
+				return;
+			}
+
+			$probe = Media_Library_Protection_Helpers::get_probe_result();
+
+			if ( $probe === null || time() - $probe['time'] > DAY_IN_SECONDS ) {
+				$probe = Media_Library_Protection_Helpers::probe();
+			}
+
+			// "failed" and "no_file" prove nothing either way, so only the self-test reports them.
+			if ( $probe['result'] !== 'not_routed' ) {
+				return;
+			}
+
+			self::compat_warning(
+				sprintf(
+					'%s -> %s After a change, run the plugin self-test to check again. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+					__METHOD__,
+					Media_Library_Protection_Helpers::probe_explanation( $probe )
 				)
 			);
 		}
@@ -636,7 +704,7 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 				}
 
 				/**
-				 * @since 45.1  A website that enabled "Require login for the Media Folder" before this version has
+				 * @since 45.1  A website that enabled "Media Library Protection" before this version has
 				 * an older .htaccess rule that weakens the access check on Apache. The rule is not rewritten automatically
 				 * (that would be the only upgrade action to touch a file, and auto-editing .htaccess is risky); instead the
 				 * administrator is warned once to disable and re-enable the option, which rewrites the rule. Only when the
@@ -652,7 +720,7 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 					) {
 						self::compat_warning(
 							sprintf(
-								'%s -> Because of a security improvement, please disable and then re-enable the <em>Require login for the Media Folder</em> option on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page. On Apache websites that use .htaccess for access control, this updates the rules that enforce the login requirement for Media Library items. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
+								'%s -> Because of a security improvement, please disable and then re-enable the <em>Media Library Protection</em> option on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page. On Apache websites that use .htaccess for access control, this updates the rules that enforce the login requirement for Media Library items. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.',
 								__METHOD__
 							)
 						);
@@ -860,7 +928,7 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 		}
 
 		/**
-		 * Whether this website has the default layout "Require login for the Media Folder" expects, judged only from values
+		 * Whether this website has the default layout "Media Library Protection" expects, judged only from values
 		 * WordPress already holds in memory: the constants it derives from ABSPATH unless wp-config.php overrides them
 		 * (default-constants.php), autoloaded options and the site's address. No file system access. When it returns true,
 		 * media_folder_layout_problems() can't find a problem either; anything unusual is left to it.
@@ -902,10 +970,12 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 		}
 
 		/**
-		 * Why "Require login for the Media Folder" cannot work with this website's layout, if at all. See
+		 * Why "Media Library Protection" cannot work with this website's layout, if at all. See
 		 * check_media_folder_layout().
 		 *
 		 * @since   45.3
+		 * @since   45.5    The proxy finds WordPress through Secure_Download_Handler::wp_root(). With a premium plugin that
+		 *                  writes the rule into the uploads folder, only the host of the media URLs matters for the rule.
 		 *
 		 * @return  string[]  The reasons as HTML-safe clauses; empty for a supported layout.
 		 */
@@ -914,14 +984,34 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 			$wp_root   = trailingslashit( ABSPATH );
 			$login_dir = isset( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) ? untrailingslashit( $GLOBALS['WPO_CONFIG']['plugin_dir'] ) : dirname( __DIR__ );
 
-			// The proxy loads wp-load.php from dirname( __DIR__, 4 ) of Core/Secure_Download_Handler.php. Checked on every web
-			// server, because a rule written by hand doesn't change that.
-			if ( realpath( dirname( $login_dir, 3 ) ) !== realpath( $wp_root ) ) {
-				$reasons[] = 'WPO365 cannot load WordPress for requests for Media Library items, because the wp-content folder is not inside the WordPress folder';
+			// Checked on every web server, because a rule written by hand doesn't change where the proxy loads WordPress from.
+			$handler_root = Secure_Download_Handler::wp_root();
+
+			if ( $handler_root === false || realpath( $handler_root ) !== realpath( $wp_root ) ) {
+				$reasons[] = 'WPO365 cannot load WordPress for requests for Media Library items, because the wp-content folder is not inside the WordPress folder and WPO365 could not record where WordPress is (in the wpo365 folder inside wp-content)';
 			}
 
 			// WPO365 only writes its rule for Apache and LiteSpeed. Elsewhere the administrator writes it, possibly to fit the layout.
 			if ( empty( $GLOBALS['is_apache'] ) ) {
+				return $reasons;
+			}
+
+			$uploads = wp_upload_dir( null, false );
+
+			// The rule in the uploads folder fits any folder layout, as long as this website serves the media.
+			if ( method_exists( '\Wpo\Services\Secure_Download_Service', 'htaccess_file' ) ) {
+				$media_host     = wp_parse_url( (string) $uploads['baseurl'], PHP_URL_HOST );
+				$expected_hosts = array( wp_parse_url( site_url(), PHP_URL_HOST ) );
+
+				// A WP_CONTENT_URL defined in wp-config.php can point a subsite's media to the network's host.
+				if ( is_multisite() ) {
+					$expected_hosts[] = wp_parse_url( network_site_url(), PHP_URL_HOST );
+				}
+
+				if ( is_string( $media_host ) && ! in_array( strtolower( $media_host ), array_map( 'strtolower', array_filter( $expected_hosts, 'is_string' ) ), true ) ) {
+					$reasons[] = sprintf( 'Media Library items are served from %s instead of %s', esc_html( $media_host ), esc_html( (string) $expected_hosts[0] ) );
+				}
+
 				return $reasons;
 			}
 
@@ -945,7 +1035,6 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 			}
 
 			// A site's own uploads folder ends with sites/<id> on a network; the rule covers the folder above it.
-			$uploads      = wp_upload_dir( null, false );
 			$basedir      = untrailingslashit( (string) $uploads['basedir'] );
 			$sites_suffix = '';
 
@@ -979,6 +1068,46 @@ if ( ! class_exists( '\Wpo\Core\Compatibility_Helpers' ) ) {
 			}
 
 			return $reasons;
+		}
+
+		/**
+		 * The health message for a reason that Secure_Download_Service::htaccess_rules_problem() returns, with what's wrong
+		 * and how to fix it. Switching the option off and on doesn't help against "RewriteEngine Off", because that line
+		 * isn't WPO365's.
+		 *
+		 * @since   45.5
+		 *
+		 * @param   string $problem
+		 *
+		 * @return  string  HTML-safe.
+		 */
+		private static function media_folder_rules_message( $problem ) {
+			$file   = '<code>' . esc_html( wp_normalize_path( \Wpo\Services\Secure_Download_Service::htaccess_file() ) ) . '</code>';
+			$toggle = 'Please switch <em>Media Library Protection</em> off and on again on the plugin\'s <a href="#rolesAccess">Roles + Access</a> configuration page';
+			$after  = 'Then click <em>Dismiss all</em> at the bottom of the WPO365 Health Messages panel, and reload any WP Admin page. See <a href="https://docs.wpo365.com/article/229-require-login-for-the-wordpress-media-folder" target="_blank">the documentation</a> for details.';
+
+			switch ( $problem ) {
+				case 'moved':
+					$message = sprintf( 'Since version 45.5, WPO365 writes the rules of <em>Media Library Protection</em> into the .htaccess file of the uploads folder (%s), where other rules can\'t bypass them. %s to move the rules there.', $file, $toggle );
+					break;
+
+				case 'outdated':
+					$message = sprintf( '<em>Media Library Protection</em> is switched on, but its rules in %s are outdated or were changed, so Media Library items may not be protected. %s to rewrite the rules.', $file, $toggle );
+					break;
+
+				case 'not_at_top':
+					$message = sprintf( '<em>Media Library Protection</em> is switched on, but its rules are no longer at the top of %s, for example because another plugin added its own rules before them, which can bypass them. %s to move the rules back to the top.', $file, $toggle );
+					break;
+
+				case 'engine_off':
+					$message = sprintf( '<em>Media Library Protection</em> is switched on, but %s contains "RewriteEngine Off" after its rules, for example added by another plugin. That switches the rules off, so Media Library items can currently be opened without signing in. Please remove that line, and check which plugin added it, because it may add it again.', $file );
+					break;
+
+				default:
+					$message = sprintf( '<em>Media Library Protection</em> is switched on, but its rules are missing from %s (for example after importing a configuration), so Media Library items are probably not protected. %s to write the rules.', $file, $toggle );
+			}
+
+			return $message . ' ' . $after;
 		}
 	}
 }

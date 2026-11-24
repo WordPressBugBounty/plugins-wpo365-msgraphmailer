@@ -62,15 +62,10 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 
 					if ( is_array( $cached_errors ) && ! ( isset( $_GET['page'] ) && WordPress_Helpers::trim( $_GET['page'] ) === 'wpo365-wizard' ) ) { // phpcs:ignore
 
-						$title          = __( 'WPO365 health status', 'wpo365-login' );
-						$dismiss_button = sprintf(
-							'</p><p><a class="button button-primary" href="#" onclick="javascript:window.location.href = window.location.href.replace(\'page=wpo365-wizard\', \'page=wpo365-wizard&wpo365_errors_dismissed=true\')">%s</a>',
-							__( 'Dismiss', 'wpo365-login' )
-						);
-						$footer         = '- Marco van Wieren | Downloads by van Wieren | <a href="https://www.wpo365.com/">https://www.wpo365.com/</a>';
-						$notice_type    = 'error';
-						$hide_image     = true;
-						$message        = '';
+						$title       = __( 'WPO365 health status', 'wpo365-login' );
+						$footer      = '- Marco van Wieren | Downloads by van Wieren | <a href="https://www.wpo365.com/">https://www.wpo365.com/</a>';
+						$notice_type = 'error';
+						$hide_image  = true;
 
 						$message = sprintf(
 							/* translators:  1: Name of the plugin in question - do not translate 2: Clickable link - do not translate */
@@ -205,18 +200,14 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 		}
 
 		/**
-		 * Helper to configure a transient to surpress admoin notices when the user clicked dismiss.
+		 * Handles the "Remind me later" and "No thanks" buttons of the review notice.
 		 *
 		 * @since 7.18
+		 * @since 45.5  Without the unused branches for the health status and upgrade notices.
 		 *
 		 * @return void
 		 */
 		public static function dismiss_admin_notices() {
-
-			if ( isset( $_GET['wpo365_errors_dismissed'] ) ) { // phpcs:ignore
-				Wpmu_Helpers::mu_delete_transient( 'wpo365_errors' );
-				Url_Helpers::force_redirect( remove_query_arg( 'wpo365_errors_dismissed' ) );
-			}
 
 			if ( isset( $_GET['wpo365_review_dismissed'] ) ) { // phpcs:ignore
 				Wpmu_Helpers::mu_set_transient( 'wpo365_review_dismissed', gmdate( 'd' ), 1209600 );
@@ -227,12 +218,6 @@ if ( ! class_exists( '\Wpo\Services\Notifications_Service' ) ) {
 				Wpmu_Helpers::mu_delete_transient( 'wpo365_review_dismissed' );
 				Options_Service::add_update_option( 'review_stop', true );
 				Url_Helpers::force_redirect( remove_query_arg( 'wpo365_review_stop' ) );
-			}
-
-			if ( isset( $_GET['wpo365_upgrade_dismissed'] ) ) { // phpcs:ignore
-				Wpmu_Helpers::mu_delete_transient( 'wpo365_user_created' );
-				Wpmu_Helpers::mu_set_transient( 'wpo365_upgrade_dismissed', gmdate( 'd' ), 1209600 );
-				Url_Helpers::force_redirect( remove_query_arg( 'wpo365_upgrade_dismissed' ) );
 			}
 		}
 	}

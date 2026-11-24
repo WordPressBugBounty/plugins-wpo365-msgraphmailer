@@ -3,7 +3,7 @@ Contributors: wpo365
 Tags: Microsoft, SMTP, Email, wp_mail, PHPMailer
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 6.5
+Stable tag: 6.6
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -131,6 +131,10 @@ Please refer to [these **Getting started** articles](https://docs.wpo365.com/art
 4. Premium configuration options.
 
 == Changelog ==
+
+= 6.6 =
+
+* Security: Updated phpseclib to version 3.0.59 (was 3.0.58), which patches [GHSA-q4pw-cp3q-jxmp](https://github.com/phpseclib/phpseclib/security/advisories/GHSA-q4pw-cp3q-jxmp). WPO365 doesn't use the affected code.
 
 = 6.5 =
 

@@ -859,18 +859,18 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 			}
 
 			/**
-			 * @since   45.0    A request for a Media Folder item (see Secure_Download_Proxy.php) may be allowed by the
+			 * @since   45.0    A request for a Media Library item (see Secure_Download_Proxy.php) may be allowed by the
 			 *                  wpo365/media/skip_authentication filter. The outcome is stored as 1 / 0, so that
 			 *                  Secure_Download_Service can reuse it instead of evaluating the filter again.
-			 * @since   45.1    Always skipped when the site that owns the item has "Require login for the Media
-			 *                  Folder" off. Its items are public then, as the web server would serve them. On a multisite
+			 * @since   45.1    Always skipped when the site that owns the item has "Media Library Protection"
+			 *                  off. Its items are public then, as the web server would serve them. On a multisite
 			 *                  network in dedicated mode the one rewrite rule also routes such sites' items here.
 			 */
 
 			if ( defined( 'WPO365_SECURE_DOWNLOAD' ) && constant( 'WPO365_SECURE_DOWNLOAD' ) === true ) {
 
 				if ( ! Options_Service::get_global_boolean_var( 'block_direct_media_access' ) ) {
-					Log_Service::write_log( 'DEBUG', sprintf( '%s -> Skipping authentication because "Require login for the Media Folder" is off for this site', __METHOD__ ) );
+					Log_Service::write_log( 'DEBUG', sprintf( '%s -> Skipping authentication because "Media Library Protection" is off for this site', __METHOD__ ) );
 					return true;
 				}
 
@@ -880,7 +880,7 @@ if ( ! class_exists( '\Wpo\Services\Authentication_Service' ) ) {
 				$request->set_item( 'media_skip_authentication', $media_skip_authentication ? 1 : 0 );
 
 				if ( $media_skip_authentication ) {
-					Log_Service::write_log( 'DEBUG', sprintf( '%s -> Skipping authentication because the wpo365/media/skip_authentication filter allows this request for a Media Folder item', __METHOD__ ) );
+					Log_Service::write_log( 'DEBUG', sprintf( '%s -> Skipping authentication because the wpo365/media/skip_authentication filter allows this request for a Media Library item', __METHOD__ ) );
 					return true;
 				}
 			}
